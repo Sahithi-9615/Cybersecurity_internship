@@ -1,0 +1,9 @@
+{
+  "name": "node-keylogger",
+  "version": "1.0.0",
+  "description": "Linux keyboard event logger using Node.js",
+  "main": "index.js",
+  "keywords": ["keyboard", "linux", "nodejs", "events"],
+  "author": "Intern Name",
+  "license": "ISC"
+}
