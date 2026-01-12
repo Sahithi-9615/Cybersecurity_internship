@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Text Encryption Tool</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.263.1/umd/lucide.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #1e293b 0%, #7e22ce 50%, #1e293b 100%);
+            min-height: 100vh;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .header h1 {
+            color: white;
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+        }
+
+        .header p {
+            color: #d8b4fe;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 1.5rem;
+            padding: 2rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .mode-buttons {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .mode-btn {
+            flex: 1;
+            padding: 1rem;
+            border: none;
+            border-radius: 0.75rem;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .mode-btn.active {
+            background: #9333ea;
+            color: white;
+            box-shadow: 0 4px 12px rgba(147, 51, 234, 0.4);
+        }
+
+        .mode-btn:not(.active) {
+            background: rgba(255, 255, 255, 0.05);
+            color: #d8b4fe;
+        }
+
+        .mode-btn:not(.active):hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .form-group label {
+            display: block;
+            color: #d8b4fe;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        textarea, input {
+            width: 100%;
+            padding: 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 0.75rem;
+            background: rgba(255, 255, 255, 0.05);
+            color: white;
+            font-size: 1rem;
+            font-family: inherit;
+        }
+
+        textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        textarea::placeholder, input::placeholder {
+            color: rgba(216, 180, 254, 0.5);
+        }
+
+        textarea:focus, input:focus {
+            outline: none;
+            border-color: #9333ea;
+            box-shadow: 0 0 0 3px rgba(147, 51, 234, 0.2);
+        }
+
+        .error {
+            padding: 1rem;
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid rgba(239, 68, 68, 0.5);
+            border-radius: 0.75rem;
+            color: #fca5a5;
+            margin-bottom: 1.5rem;
+        }
+
+        .btn-primary {
+            width: 100%;
+            padding: 1rem;
+            border: none;
+            border-radius: 0.75rem;
+            background: linear-gradient(135deg, #9333ea 0%, #ec4899 100%);
+            color: white;
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(147, 51, 234, 0.4);
+        }
+
+        .result-section {
+            margin-top: 1.5rem;
+        }
+
+        .result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .result-header label {
+            color: #d8b4fe;
+            font-weight: 600;
+        }
+
+        .btn-copy {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 0.5rem;
+            background: rgba(255, 255, 255, 0.1);
+            color: #d8b4fe;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.3s;
+        }
+
+        .btn-copy:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .result-box {
+            padding: 1rem;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 0.75rem;
+            color: white;
+            word-break: break-all;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .info-box {
+            margin-top: 1.5rem;
+            padding: 1rem;
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 0.75rem;
+            color: #93c5fd;
+            font-size: 0.875rem;
+        }
+
+        .info-box strong {
+            display: block;
+            margin-bottom: 0.5rem;
+        }
+
+        .info-box ul {
+            margin-left: 1.5rem;
+            margin-top: 0.5rem;
+        }
+
+        .info-box li {
+            margin-bottom: 0.25rem;
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>
+                <i data-lucide="lock" style="width: 40px; height: 40px; color: #c084fc;"></i>
+                Text Encryption Tool
+            </h1>
+            <p>Secure AES-256-CBC encryption with PBKDF2 key derivation</p>
+        </div>
+
+        <div class="card">
+            <div class="mode-buttons">
+                <button class="mode-btn active" id="encryptBtn" onclick="setMode('encrypt')">
+                    <i data-lucide="lock" style="width: 20px; height: 20px;"></i>
+                    Encrypt
+                </button>
+                <button class="mode-btn" id="decryptBtn" onclick="setMode('decrypt')">
+                    <i data-lucide="unlock" style="width: 20px; height: 20px;"></i>
+                    Decrypt
+                </button>
+            </div>
+
+            <div class="form-group">
+                <label id="textLabel">Text to Encrypt</label>
+                <textarea id="inputText" placeholder="Enter your secret message..."></textarea>
+            </div>
+
+            <div class="form-group">
+                <label>
+                    <i data-lucide="key" style="width: 16px; height: 16px; display: inline-block; vertical-align: middle;"></i>
+                    Password
+                </label>
+                <input type="password" id="password" placeholder="Enter a strong password...">
+            </div>
+
+            <div id="errorBox" class="error hidden"></div>
+
+            <button class="btn-primary" onclick="processText()">
+                <i data-lucide="lock" id="actionIcon" style="width: 20px; height: 20px;"></i>
+                <span id="actionText">Encrypt Text</span>
+            </button>
+
+            <div id="resultSection" class="result-section hidden">
+                <div class="result-header">
+                    <label id="resultLabel">Encrypted Output</label>
+                    <button class="btn-copy" onclick="copyResult()">
+                        <i data-lucide="copy" id="copyIcon" style="width: 16px; height: 16px;"></i>
+                        <span id="copyText">Copy</span>
+                    </button>
+                </div>
+                <div class="result-box" id="resultBox"></div>
+            </div>
+
+            <div class="info-box">
+                <strong>Security Features:</strong>
+                <ul>
+                    <li>AES-256-CBC encryption algorithm</li>
+                    <li>Random IV (Initialization Vector) for each encryption</li>
+                    <li>PBKDF2 key derivation with 100,000 iterations</li>
+                    <li>Random salt to prevent rainbow table attacks</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentMode = 'encrypt';
+
+        // Initialize Lucide icons
+        lucide.createIcons();
+
+        function setMode(mode) {
+            currentMode = mode;
+            
+            document.getElementById('encryptBtn').classList.toggle('active', mode === 'encrypt');
+            document.getElementById('decryptBtn').classList.toggle('active', mode === 'decrypt');
+            
+            document.getElementById('textLabel').textContent = mode === 'encrypt' ? 'Text to Encrypt' : 'Encrypted Text (Hex)';
+            document.getElementById('inputText').placeholder = mode === 'encrypt' ? 'Enter your secret message...' : 'Paste encrypted text here...';
+            document.getElementById('actionText').textContent = mode === 'encrypt' ? 'Encrypt Text' : 'Decrypt Text';
+            document.getElementById('resultLabel').textContent = mode === 'encrypt' ? 'Encrypted Output' : 'Decrypted Output';
+            
+            document.getElementById('inputText').value = '';
+            document.getElementById('password').value = '';
+            document.getElementById('resultSection').classList.add('hidden');
+            document.getElementById('errorBox').classList.add('hidden');
+            
+            lucide.createIcons();
+        }
+
+        function buf2hex(buffer) {
+            return Array.from(new Uint8Array(buffer))
+                .map(b => b.toString(16).padStart(2, '0'))
+                .join('');
+        }
+
+        function hex2buf(hex) {
+            const bytes = new Uint8Array(hex.length / 2);
+            for (let i = 0; i < hex.length; i += 2) {
+                bytes[i / 2] = parseInt(hex.substr(i, 2), 16);
+            }
+            return bytes.buffer;
+        }
+
+        async function deriveKey(password, salt) {
+            const enc = new TextEncoder();
+            const keyMaterial = await window.crypto.subtle.importKey(
+                'raw',
+                enc.encode(password),
+                { name: 'PBKDF2' },
+                false,
+                ['deriveBits', 'deriveKey']
+            );
+
+            return window.crypto.subtle.deriveKey(
+                {
+                    name: 'PBKDF2',
+                    salt: salt,
+                    iterations: 100000,
+                    hash: 'SHA-256'
+                },
+                keyMaterial,
+                { name: 'AES-CBC', length: 256 },
+                false,
+                ['encrypt', 'decrypt']
+            );
+        }
+
+        async function encryptText(text, password) {
+            const enc = new TextEncoder();
+            const data = enc.encode(text);
+            
+            const iv = window.crypto.getRandomValues(new Uint8Array(16));
+            const salt = window.crypto.getRandomValues(new Uint8Array(16));
+            
+            const key = await deriveKey(password, salt);
+            
+            const encrypted = await window.crypto.subtle.encrypt(
+                { name: 'AES-CBC', iv: iv },
+                key,
+                data
+            );
+            
+            const combined = new Uint8Array(salt.length + iv.length + encrypted.byteLength);
+            combined.set(salt, 0);
+            combined.set(iv, salt.length);
+            combined.set(new Uint8Array(encrypted), salt.length + iv.length);
+            
+            return buf2hex(combined.buffer);
+        }
+
+        async function decryptText(encryptedHex, password) {
+            const combined = new Uint8Array(hex2buf(encryptedHex));
+            
+            const salt = combined.slice(0, 16);
+            const iv = combined.slice(16, 32);
+            const encrypted = combined.slice(32);
+            
+            const key = await deriveKey(password, salt);
+            
+            const decrypted = await window.crypto.subtle.decrypt(
+                { name: 'AES-CBC', iv: iv },
+                key,
+                encrypted
+            );
+            
+            const dec = new TextDecoder();
+            return dec.decode(decrypted);
+        }
+
+        async function processText() {
+            const text = document.getElementById('inputText').value;
+            const password = document.getElementById('password').value;
+            const errorBox = document.getElementById('errorBox');
+            const resultSection = document.getElementById('resultSection');
+            const resultBox = document.getElementById('resultBox');
+
+            errorBox.classList.add('hidden');
+            resultSection.classList.add('hidden');
+
+            if (!text || !password) {
+                errorBox.textContent = 'Please enter both text and password';
+                errorBox.classList.remove('hidden');
+                return;
+            }
+
+            try {
+                let result;
+                if (currentMode === 'encrypt') {
+                    result = await encryptText(text, password);
+                } else {
+                    result = await decryptText(text, password);
+                }
+                
+                resultBox.textContent = result;
+                resultSection.classList.remove('hidden');
+            } catch (err) {
+                errorBox.textContent = currentMode === 'encrypt' 
+                    ? 'Encryption failed: ' + err.message
+                    : 'Decryption failed. Wrong password or corrupted data.';
+                errorBox.classList.remove('hidden');
+            }
+        }
+
+        function copyResult() {
+            const result = document.getElementById('resultBox').textContent;
+            navigator.clipboard.writeText(result);
+            
+            document.getElementById('copyText').textContent = 'Copied!';
+            setTimeout(() => {
+                document.getElementById('copyText').textContent = 'Copy';
+            }, 2000);
+        }
+    </script>
+</body>
+</html>
