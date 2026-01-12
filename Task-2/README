@@ -1,0 +1,20 @@
+# Node.js Keyboard Event Logger
+
+## Description
+This project captures Linux keyboard events using Node.js and emits them using EventEmitter.
+
+## Features
+- Reads raw keyboard input from /dev/input
+- Emits keydown, keyup, keypress events
+- Lightweight and dependency-free
+
+## Usage
+
+```js
+const Keyboard = require('./index');
+const kb = new Keyboard('event0');
+
+kb.on('keydown', e => console.log('DOWN:', e));
+kb.on('keyup', e => console.log('UP:', e));
+kb.on('keypress', e => console.log('PRESS:', e));
+kb.on('error', console.error);
