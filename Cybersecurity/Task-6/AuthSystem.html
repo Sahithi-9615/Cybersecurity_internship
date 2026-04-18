@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AuthCore — User Authentication System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Sora:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --bg:#0a0e1a;--surface:#111827;--surface2:#1a2235;--border:#1e2d45;
+    --text:#e8eaf0;--muted:#6b7a99;--accent:#4f8ef7;--accent2:#7c5cbf;
+    --success:#22c78a;--danger:#f05c6e;--warn:#f0a43a;
+    --font:'Sora',sans-serif;--mono:'JetBrains Mono',monospace;
+  }
+  body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh}
+  .app{display:flex;height:100vh;overflow:hidden}
+  .sidebar{width:220px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:1.25rem 0;flex-shrink:0}
+  .logo{padding:0 1.25rem 1.25rem;border-bottom:1px solid var(--border);margin-bottom:.75rem}
+  .logo h2{font-size:14px;font-weight:600;color:var(--accent);letter-spacing:.08em;text-transform:uppercase}
+  .logo p{font-size:11px;color:var(--muted);margin-top:3px}
+  .nav-item{display:flex;align-items:center;gap:10px;padding:.55rem 1.25rem;font-size:13px;color:var(--muted);cursor:pointer;transition:all .15s;border-left:3px solid transparent}
+  .nav-item:hover{color:var(--text);background:var(--surface2)}
+  .nav-item.active{color:var(--accent);background:rgba(79,142,247,.08);border-left-color:var(--accent)}
+  .nav-icon{width:16px;height:16px;opacity:.7}
+  .main{flex:1;overflow-y:auto;background:var(--bg);padding:2rem}
+  .page{display:none}
+  .page.active{display:block}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:1.5rem}
+  .card-sm{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:1rem 1.25rem}
+  h1{font-size:22px;font-weight:600;margin-bottom:.25rem}
+  h3{font-size:14px;font-weight:500;margin-bottom:.75rem;color:var(--text)}
+  .subtitle{font-size:13px;color:var(--muted);margin-bottom:1.75rem}
+  .form-group{margin-bottom:1.1rem}
+  label{display:block;font-size:12px;font-weight:500;color:var(--muted);margin-bottom:.4rem;text-transform:uppercase;letter-spacing:.06em}
+  input[type=text],input[type=email],input[type=password],input[type=tel],select{
+    width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);
+    border-radius:6px;padding:.55rem .75rem;font-size:13px;font-family:var(--font);outline:none;transition:border .15s
+  }
+  input:focus,select:focus{border-color:var(--accent)}
+  .input-row{display:grid;grid-template-columns:1fr 1fr;gap:.75rem}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:.55rem 1.1rem;border-radius:6px;font-size:13px;font-weight:500;font-family:var(--font);cursor:pointer;border:none;transition:all .15s}
+  .btn-primary{background:var(--accent);color:#fff}
+  .btn-primary:hover{background:#3a7bf0}
+  .btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border)}
+  .btn-ghost:hover{color:var(--text);border-color:var(--accent)}
+  .btn-danger{background:rgba(240,92,110,.12);color:var(--danger);border:1px solid rgba(240,92,110,.25)}
+  .btn-success{background:rgba(34,199,138,.12);color:var(--success);border:1px solid rgba(34,199,138,.25)}
+  .btn-block{width:100%}
+  .badge{display:inline-flex;align-items:center;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:500}
+  .badge-success{background:rgba(34,199,138,.12);color:var(--success)}
+  .badge-danger{background:rgba(240,92,110,.12);color:var(--danger)}
+  .badge-warn{background:rgba(240,164,58,.12);color:var(--warn)}
+  .badge-info{background:rgba(79,142,247,.12);color:var(--accent)}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem}
+  .stat-val{font-size:26px;font-weight:600;margin:.3rem 0 .15rem}
+  .stat-lbl{font-size:12px;color:var(--muted)}
+  .divider{border:none;border-top:1px solid var(--border);margin:1.25rem 0}
+  .token-box{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:.65rem .9rem;font-family:var(--mono);font-size:11px;color:var(--muted);word-break:break-all;margin-top:.5rem}
+  .toggle-row{display:flex;align-items:center;justify-content:space-between;padding:.5rem 0}
+  .toggle{position:relative;width:36px;height:20px;cursor:pointer}
+  .toggle input{opacity:0;width:0;height:0}
+  .slider{position:absolute;inset:0;background:var(--border);border-radius:20px;transition:.2s}
+  .slider:before{content:'';position:absolute;height:14px;width:14px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s}
+  .toggle input:checked + .slider{background:var(--accent)}
+  .toggle input:checked + .slider:before{transform:translateX(16px)}
+  .user-row{display:flex;align-items:center;gap:10px;padding:.7rem 0;border-bottom:1px solid var(--border)}
+  .user-row:last-child{border-bottom:none}
+  .avatar{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600}
+  .session-row{display:flex;align-items:center;justify-content:space-between;padding:.6rem 0;border-bottom:1px solid var(--border);font-size:13px}
+  .session-row:last-child{border-bottom:none}
+  .code-block{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:.75rem 1rem;font-family:var(--mono);font-size:11.5px;color:#a5c3f7;line-height:1.7;margin-top:.5rem;overflow-x:auto}
+  .code-block .kw{color:#bf9af7}.code-block .str{color:#22c78a}.code-block .cm{color:var(--muted)}
+  .step-row{display:flex;gap:1rem;align-items:flex-start;margin-bottom:1rem}
+  .step-num{width:26px;height:26px;border-radius:50%;background:rgba(79,142,247,.15);border:1px solid rgba(79,142,247,.3);display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--accent);flex-shrink:0;margin-top:2px}
+  .step-content p{font-size:13px;color:var(--text);margin-top:3px}
+  .step-content strong{font-size:13px;font-weight:500}
+  .otp-row{display:flex;gap:10px;margin:1rem 0}
+  .otp-input{width:46px;height:52px;text-align:center;font-size:20px;font-weight:600;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--mono)}
+  .otp-input:focus{border-color:var(--accent);outline:none}
+  .alert{border-radius:8px;padding:.75rem 1rem;font-size:13px;display:flex;align-items:center;gap:8px;margin-bottom:1rem}
+  .alert-info{background:rgba(79,142,247,.1);border:1px solid rgba(79,142,247,.25);color:#7ab3f9}
+  .alert-success{background:rgba(34,199,138,.1);border:1px solid rgba(34,199,138,.25);color:var(--success)}
+  .alert-danger{background:rgba(240,92,110,.1);border:1px solid rgba(240,92,110,.25);color:var(--danger)}
+  .progress-bar{height:6px;background:var(--border);border-radius:3px;overflow:hidden;margin:.4rem 0}
+  .progress-fill{height:100%;border-radius:3px;transition:width .3s}
+  .tab-row{display:flex;gap:4px;margin-bottom:1.5rem;border-bottom:1px solid var(--border);padding-bottom:0}
+  .tab{padding:.5rem 1rem;font-size:13px;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s}
+  .tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+  .tab:hover:not(.active){color:var(--text)}
+  .info-row{display:flex;justify-content:space-between;align-items:center;font-size:13px;padding:.4rem 0;border-bottom:1px solid var(--border)}
+  .info-row:last-child{border-bottom:none}
+  .info-row .lbl{color:var(--muted)}
+  #pw-strength{height:4px;border-radius:2px;transition:all .3s;margin-top:.4rem}
+  .toaster{position:fixed;top:1.25rem;right:1.25rem;display:flex;flex-direction:column;gap:.5rem;z-index:999}
+  .toast{padding:.65rem 1rem;border-radius:8px;font-size:13px;background:var(--surface);border:1px solid var(--border);animation:slideIn .2s ease;display:flex;align-items:center;gap:8px;min-width:220px}
+  @keyframes slideIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="sidebar">
+    <div class="logo">
+      <h2>AuthCore</h2>
+      <p>v2.4 — Secure Auth System</p>
+    </div>
+    <div class="nav-item active" onclick="nav('signup')">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><path d="M8 2a3 3 0 1 0 0 6 3 3 0 0 0 0-6zM3 13a5 5 0 0 1 10 0" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+      Sign Up
+    </div>
+    <div class="nav-item" onclick="nav('signin')">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><path d="M6 3H3a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h3M10 11l3-3-3-3M13 8H6" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Sign In
+    </div>
+    <div class="nav-item" onclick="nav('mfa')">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><rect x="3" y="7" width="10" height="8" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M5 7V5a3 3 0 0 1 6 0v2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+      MFA
+    </div>
+    <div class="nav-item" onclick="nav('reset')">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><path d="M2 8a6 6 0 1 1 1.5 4M2 12V8h4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Password Reset
+    </div>
+    <div class="nav-item" onclick="nav('rbac')">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><path d="M8 1l2 4h4l-3.3 2.4 1.3 4L8 9 4 11.4l1.3-4L2 5h4z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
+      RBAC
+    </div>
+    <div class="nav-item" onclick="nav('sessions')">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><rect x="1" y="3" width="14" height="10" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M1 6h14" stroke="currentColor" stroke-width="1.3"/></svg>
+      Sessions / JWT
+    </div>
+    <div class="nav-item" onclick="nav('users')">
+      <svg class="nav-icon" viewBox="0 0 16 16" fill="none"><path d="M2 13a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4M10 4a2 2 0 1 1-4 0 2 2 0 0 1 4 0M12 6a2 2 0 1 0 2 2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+      Users
+    </div>
+  </div>
+
+  <div class="main">
+
+    <!-- SIGN UP -->
+    <div id="page-signup" class="page active">
+      <h1>Create Account</h1>
+      <p class="subtitle">Secure registration with hashed passwords and email verification</p>
+      <div class="grid2" style="gap:1.5rem">
+        <div class="card">
+          <div class="input-row">
+            <div class="form-group"><label>First Name</label><input type="text" value="Alex" id="su-fname"></div>
+            <div class="form-group"><label>Last Name</label><input type="text" value="Morgan" id="su-lname"></div>
+          </div>
+          <div class="form-group"><label>Email</label><input type="email" value="alex@example.com" id="su-email"></div>
+          <div class="form-group">
+            <label>Password</label>
+            <input type="password" id="su-pw" oninput="checkPwStrength(this.value)" placeholder="Min 12 characters…">
+            <div id="pw-strength"></div>
+            <p id="pw-hint" style="font-size:11px;color:var(--muted);margin-top:.35rem">Enter a password to check strength</p>
+          </div>
+          <div class="form-group"><label>Confirm Password</label><input type="password" id="su-cpw" placeholder="Re-enter password"></div>
+          <div class="toggle-row">
+            <span style="font-size:13px">Enable MFA at registration</span>
+            <label class="toggle"><input type="checkbox" id="su-mfa" checked><span class="slider"></span></label>
+          </div>
+          <div class="toggle-row">
+            <span style="font-size:13px">Agree to terms of service</span>
+            <label class="toggle"><input type="checkbox" checked><span class="slider"></span></label>
+          </div>
+          <hr class="divider">
+          <button class="btn btn-primary btn-block" onclick="doSignup()">Create Account</button>
+        </div>
+        <div>
+          <div class="card-sm" style="margin-bottom:1rem">
+            <h3>How passwords are stored</h3>
+            <div class="step-row"><div class="step-num">1</div><div class="step-content"><strong>Input received</strong><p>Plain-text password arrives server-side</p></div></div>
+            <div class="step-row"><div class="step-num">2</div><div class="step-content"><strong>Argon2id hashing</strong><p>Memory: 64MB · Iterations: 3 · Parallelism: 4</p></div></div>
+            <div class="step-row"><div class="step-num">3</div><div class="step-content"><strong>Salt generated</strong><p>16-byte cryptographic salt per user</p></div></div>
+            <div class="step-row" style="margin-bottom:0"><div class="step-num">4</div><div class="step-content"><strong>Stored in DB</strong><p>Only hash + salt — never plaintext</p></div></div>
+          </div>
+          <div class="card-sm">
+            <h3>Server-side logic (Node/Express)</h3>
+            <div class="code-block">
+<span class="kw">const</span> argon2 = require(<span class="str">'argon2'</span>);<br>
+<span class="cm">// On registration:</span><br>
+<span class="kw">const</span> hash = <span class="kw">await</span> argon2.hash(password, {<br>
+&nbsp;&nbsp;type: argon2.argon2id,<br>
+&nbsp;&nbsp;memoryCost: 2 ** 16,<br>
+&nbsp;&nbsp;timeCost: 3,<br>
+&nbsp;&nbsp;parallelism: 4<br>
+});<br>
+<span class="kw">await</span> db.users.create({ email, hash });
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SIGN IN -->
+    <div id="page-signin" class="page">
+      <h1>Sign In</h1>
+      <p class="subtitle">JWT-based authentication with refresh tokens and CSRF protection</p>
+      <div class="grid2" style="gap:1.5rem">
+        <div class="card">
+          <div id="signin-alert" class="alert alert-info" style="display:none"></div>
+          <div class="form-group"><label>Email</label><input type="email" id="si-email" value="alex@example.com"></div>
+          <div class="form-group"><label>Password</label><input type="password" id="si-pw" placeholder="Your password"></div>
+          <div class="toggle-row" style="margin-bottom:1rem">
+            <span style="font-size:13px">Remember me (30 days)</span>
+            <label class="toggle"><input type="checkbox" id="si-rem"><span class="slider"></span></label>
+          </div>
+          <button class="btn btn-primary btn-block" onclick="doSignin()">Sign In</button>
+          <hr class="divider">
+          <div style="display:flex;gap:.75rem">
+            <button class="btn btn-ghost" style="flex:1;font-size:12px">Continue with Google</button>
+            <button class="btn btn-ghost" style="flex:1;font-size:12px">Continue with GitHub</button>
+          </div>
+        </div>
+        <div>
+          <div class="card-sm" style="margin-bottom:1rem">
+            <h3>JWT token anatomy</h3>
+            <div style="font-size:12px;color:var(--muted);margin-bottom:.5rem">Access token payload (decoded)</div>
+            <div class="code-block">{<br>&nbsp;&nbsp;<span class="str">"sub"</span>: <span class="str">"usr_01j4k8m"</span>,<br>&nbsp;&nbsp;<span class="str">"email"</span>: <span class="str">"alex@example.com"</span>,<br>&nbsp;&nbsp;<span class="str">"role"</span>: <span class="str">"editor"</span>,<br>&nbsp;&nbsp;<span class="str">"mfa"</span>: <span class="kw">true</span>,<br>&nbsp;&nbsp;<span class="str">"iat"</span>: 1724112000,<br>&nbsp;&nbsp;<span class="str">"exp"</span>: 1724115600 <span class="cm">// 1hr</span><br>}</div>
+          </div>
+          <div class="card-sm">
+            <h3>Token strategy</h3>
+            <div class="info-row"><span class="lbl">Access Token TTL</span><span><span class="badge badge-info">15 min</span></span></div>
+            <div class="info-row"><span class="lbl">Refresh Token TTL</span><span><span class="badge badge-info">30 days</span></span></div>
+            <div class="info-row"><span class="lbl">Storage</span><span style="font-size:12px">HttpOnly cookie</span></div>
+            <div class="info-row"><span class="lbl">Rotation</span><span><span class="badge badge-success">On every refresh</span></span></div>
+            <div class="info-row"><span class="lbl">CSRF Protection</span><span><span class="badge badge-success">Double-submit cookie</span></span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MFA -->
+    <div id="page-mfa" class="page">
+      <h1>Multi-Factor Authentication</h1>
+      <p class="subtitle">TOTP-based 2FA using authenticator apps (RFC 6238)</p>
+      <div class="grid2" style="gap:1.5rem">
+        <div class="card">
+          <div id="mfa-step1">
+            <p style="font-size:13px;margin-bottom:1rem;color:var(--muted)">Scan this QR code with Google Authenticator or Authy</p>
+            <div style="width:140px;height:140px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;margin:0 auto 1.25rem;display:flex;align-items:center;justify-content:center">
+              <svg viewBox="0 0 80 80" width="110" height="110">
+                <rect fill="#fff" width="80" height="80" rx="4"/>
+                <g fill="#0a0e1a">
+                  <rect x="5" y="5" width="28" height="28" rx="2"/><rect x="8" y="8" width="22" height="22" rx="1" fill="#fff"/>
+                  <rect x="12" y="12" width="12" height="12"/>
+                  <rect x="47" y="5" width="28" height="28" rx="2"/><rect x="50" y="8" width="22" height="22" rx="1" fill="#fff"/>
+                  <rect x="54" y="12" width="12" height="12"/>
+                  <rect x="5" y="47" width="28" height="28" rx="2"/><rect x="8" y="50" width="22" height="22" rx="1" fill="#fff"/>
+                  <rect x="12" y="54" width="12" height="12"/>
+                  <rect x="40" y="40" width="6" height="6"/><rect x="50" y="40" width="6" height="6"/><rect x="60" y="40" width="6" height="6"/>
+                  <rect x="40" y="50" width="6" height="6"/><rect x="60" y="50" width="6" height="6"/>
+                  <rect x="40" y="60" width="6" height="6"/><rect x="50" y="60" width="6" height="6"/><rect x="60" y="60" width="6" height="6"/>
+                  <rect x="50" y="50" width="6" height="6" fill="#4f8ef7"/>
+                </g>
+              </svg>
+            </div>
+            <div style="font-size:11px;text-align:center;color:var(--muted);margin-bottom:1rem">Or enter this secret key manually:</div>
+            <div class="token-box" style="text-align:center;letter-spacing:.15em;color:var(--accent)">JBSWY3DPEHPK3PXP</div>
+            <hr class="divider">
+            <p style="font-size:13px;margin-bottom:.75rem">Enter the 6-digit code from your app to verify:</p>
+            <div class="otp-row" id="otp-inputs">
+              <input class="otp-input" type="tel" maxlength="1" oninput="otpMove(this,1)">
+              <input class="otp-input" type="tel" maxlength="1" oninput="otpMove(this,2)">
+              <input class="otp-input" type="tel" maxlength="1" oninput="otpMove(this,3)">
+              <input class="otp-input" type="tel" maxlength="1" oninput="otpMove(this,4)">
+              <input class="otp-input" type="tel" maxlength="1" oninput="otpMove(this,5)">
+              <input class="otp-input" type="tel" maxlength="1" oninput="otpMove(this,6)">
+            </div>
+            <button class="btn btn-primary btn-block" onclick="verifyOtp()" style="margin-top:.75rem">Verify &amp; Enable MFA</button>
+          </div>
+          <div id="mfa-done" style="display:none;text-align:center;padding:1rem 0">
+            <div style="width:54px;height:54px;border-radius:50%;background:rgba(34,199,138,.12);border:1px solid rgba(34,199,138,.3);display:flex;align-items:center;justify-content:center;margin:0 auto 1rem">
+              <svg width="24" height="24" fill="none" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7" stroke="#22c78a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+            <p style="font-weight:500;font-size:15px;margin-bottom:.35rem">MFA Enabled</p>
+            <p style="font-size:13px;color:var(--muted)">Your account is now protected with two-factor authentication.</p>
+          </div>
+        </div>
+        <div class="card-sm">
+          <h3>Backup codes</h3>
+          <p style="font-size:12px;color:var(--muted);margin-bottom:1rem">Save these single-use recovery codes. Each can be used once if you lose access to your authenticator.</p>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:.4rem">
+            <div class="token-box" style="text-align:center">8472-KPLQ</div>
+            <div class="token-box" style="text-align:center">3391-WZXM</div>
+            <div class="token-box" style="text-align:center">9047-BRNV</div>
+            <div class="token-box" style="text-align:center">5523-DTHY</div>
+            <div class="token-box" style="text-align:center">1867-FQCE</div>
+            <div class="token-box" style="text-align:center">7782-JUOS</div>
+          </div>
+          <hr class="divider">
+          <h3>Implementation</h3>
+          <div class="code-block">
+<span class="kw">const</span> speakeasy = require(<span class="str">'speakeasy'</span>);<br>
+<span class="cm">// Verify TOTP token:</span><br>
+<span class="kw">const</span> valid = speakeasy.totp.verify({<br>
+&nbsp;&nbsp;secret: user.mfaSecret,<br>
+&nbsp;&nbsp;encoding: <span class="str">'base32'</span>,<br>
+&nbsp;&nbsp;token: req.body.token,<br>
+&nbsp;&nbsp;window: 1 <span class="cm">// ±30s drift</span><br>
+});
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PASSWORD RESET -->
+    <div id="page-reset" class="page">
+      <h1>Password Reset</h1>
+      <p class="subtitle">Time-limited cryptographic reset tokens with rate limiting</p>
+      <div class="grid2" style="gap:1.5rem">
+        <div class="card">
+          <div class="tab-row">
+            <div class="tab active" onclick="resetTab(this,'rt-req')">Request Reset</div>
+            <div class="tab" onclick="resetTab(this,'rt-verify')">Verify Token</div>
+            <div class="tab" onclick="resetTab(this,'rt-new')">New Password</div>
+          </div>
+          <div id="rt-req">
+            <p style="font-size:13px;color:var(--muted);margin-bottom:1rem">Enter your email — we'll send a one-time reset link valid for 15 minutes.</p>
+            <div class="form-group"><label>Email Address</label><input type="email" value="alex@example.com" id="reset-email"></div>
+            <button class="btn btn-primary btn-block" onclick="sendReset()">Send Reset Link</button>
+          </div>
+          <div id="rt-verify" style="display:none">
+            <div class="alert alert-info">Check your inbox. The link expires in <strong>15 minutes</strong>.</div>
+            <div class="form-group"><label>Reset Token (from email)</label><input type="text" id="reset-token" placeholder="Paste your token here…"></div>
+            <button class="btn btn-primary btn-block" onclick="verifyResetToken()">Verify Token</button>
+          </div>
+          <div id="rt-new" style="display:none">
+            <div class="alert alert-success">Token verified! Set your new password.</div>
+            <div class="form-group"><label>New Password</label><input type="password" id="new-pw" oninput="checkPwStrength2(this.value)"><div id="pw-strength2" style="height:4px;border-radius:2px;transition:all .3s;margin-top:.4rem"></div></div>
+            <div class="form-group"><label>Confirm New Password</label><input type="password" id="new-cpw"></div>
+            <button class="btn btn-primary btn-block" onclick="doPasswordReset()">Update Password</button>
+          </div>
+        </div>
+        <div class="card-sm">
+          <h3>Reset flow security</h3>
+          <div class="step-row"><div class="step-num">1</div><div class="step-content"><strong>Token generation</strong><p>64 bytes from crypto.randomBytes</p></div></div>
+          <div class="step-row"><div class="step-num">2</div><div class="step-content"><strong>SHA-256 hashed</strong><p>Only hash stored in DB, not raw token</p></div></div>
+          <div class="step-row"><div class="step-num">3</div><div class="step-content"><strong>Expiry: 15 minutes</strong><p>Token invalidated after use</p></div></div>
+          <div class="step-row" style="margin-bottom:0"><div class="step-num">4</div><div class="step-content"><strong>Rate limited</strong><p>Max 5 requests/hour per email</p></div></div>
+          <hr class="divider">
+          <div class="code-block">
+<span class="kw">const</span> raw = crypto.randomBytes(64).toString(<span class="str">'hex'</span>);<br>
+<span class="kw">const</span> hash = crypto.createHash(<span class="str">'sha256'</span>)<br>
+&nbsp;&nbsp;.update(raw).digest(<span class="str">'hex'</span>);<br>
+<span class="kw">await</span> db.tokens.create({<br>
+&nbsp;&nbsp;hash,<br>
+&nbsp;&nbsp;userId,<br>
+&nbsp;&nbsp;expiresAt: Date.now() + 15 * 60000<br>
+});
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RBAC -->
+    <div id="page-rbac" class="page">
+      <h1>Role-Based Access Control</h1>
+      <p class="subtitle">Define roles, assign permissions, enforce at middleware layer</p>
+      <div class="grid3" style="margin-bottom:1.5rem">
+        <div class="card-sm">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem">
+            <h3 style="margin:0">Admin</h3><span class="badge badge-danger">All permissions</span>
+          </div>
+          <div style="font-size:12px;color:var(--muted);display:flex;flex-direction:column;gap:.3rem">
+            <span>✓ users:read / write / delete</span>
+            <span>✓ content:publish / delete</span>
+            <span>✓ settings:manage</span>
+            <span>✓ billing:manage</span>
+          </div>
+        </div>
+        <div class="card-sm">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem">
+            <h3 style="margin:0">Editor</h3><span class="badge badge-warn">Content access</span>
+          </div>
+          <div style="font-size:12px;color:var(--muted);display:flex;flex-direction:column;gap:.3rem">
+            <span>✓ content:read / write</span>
+            <span>✓ content:publish</span>
+            <span>✗ users:write / delete</span>
+            <span>✗ settings:manage</span>
+          </div>
+        </div>
+        <div class="card-sm">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem">
+            <h3 style="margin:0">Viewer</h3><span class="badge badge-info">Read only</span>
+          </div>
+          <div style="font-size:12px;color:var(--muted);display:flex;flex-direction:column;gap:.3rem">
+            <span>✓ content:read</span>
+            <span>✗ content:write / publish</span>
+            <span>✗ users:manage</span>
+            <span>✗ settings:manage</span>
+          </div>
+        </div>
+      </div>
+      <div class="grid2" style="gap:1.5rem">
+        <div class="card-sm">
+          <h3>Middleware enforcement</h3>
+          <div class="code-block">
+<span class="kw">const</span> authorize = (permission) => (req, res, next) => {<br>
+&nbsp;&nbsp;<span class="kw">const</span> { role } = req.user; <span class="cm">// from JWT</span><br>
+&nbsp;&nbsp;<span class="kw">const</span> perms = ROLE_PERMISSIONS[role];<br>
+&nbsp;&nbsp;<span class="kw">if</span> (!perms?.includes(permission)) {<br>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">return</span> res.status(403).json({<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;error: <span class="str">'Forbidden'</span><br>
+&nbsp;&nbsp;&nbsp;&nbsp;});<br>
+&nbsp;&nbsp;}<br>
+&nbsp;&nbsp;next();<br>
+};<br><br>
+<span class="cm">// Usage on a route:</span><br>
+app.delete(<span class="str">'/users/:id'</span>,<br>
+&nbsp;&nbsp;authenticate, authorize(<span class="str">'users:delete'</span>),<br>
+&nbsp;&nbsp;deleteUserHandler);
+          </div>
+        </div>
+        <div class="card-sm">
+          <h3>Role assignment</h3>
+          <div class="user-row">
+            <div class="avatar" style="background:rgba(79,142,247,.15);color:#4f8ef7">AM</div>
+            <div style="flex:1"><p style="font-size:13px;font-weight:500">Alex Morgan</p><p style="font-size:11px;color:var(--muted)">alex@example.com</p></div>
+            <select style="width:auto;font-size:12px;padding:.3rem .6rem" onchange="toast('Role updated to '+this.value)"><option>editor</option><option>admin</option><option>viewer</option></select>
+          </div>
+          <div class="user-row">
+            <div class="avatar" style="background:rgba(124,92,191,.15);color:#7c5cbf">SK</div>
+            <div style="flex:1"><p style="font-size:13px;font-weight:500">Sam Kim</p><p style="font-size:11px;color:var(--muted)">sam@example.com</p></div>
+            <select style="width:auto;font-size:12px;padding:.3rem .6rem" onchange="toast('Role updated to '+this.value)"><option>viewer</option><option>editor</option><option>admin</option></select>
+          </div>
+          <div class="user-row">
+            <div class="avatar" style="background:rgba(34,199,138,.15);color:#22c78a">JP</div>
+            <div style="flex:1"><p style="font-size:13px;font-weight:500">Jamie Park</p><p style="font-size:11px;color:var(--muted)">jamie@example.com</p></div>
+            <select style="width:auto;font-size:12px;padding:.3rem .6rem" onchange="toast('Role updated to '+this.value)"><option>admin</option><option>editor</option><option>viewer</option></select>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SESSIONS / JWT -->
+    <div id="page-sessions" class="page">
+      <h1>Sessions &amp; JWT</h1>
+      <p class="subtitle">Active sessions, token management, and revocation</p>
+      <div class="grid3" style="margin-bottom:1.5rem">
+        <div class="card-sm"><div class="stat-lbl">Active Sessions</div><div class="stat-val" style="color:var(--accent)">3</div></div>
+        <div class="card-sm"><div class="stat-lbl">Tokens Issued (24h)</div><div class="stat-val">47</div></div>
+        <div class="card-sm"><div class="stat-lbl">Revoked Tokens</div><div class="stat-val" style="color:var(--warn)">2</div></div>
+      </div>
+      <div class="card">
+        <h3>Active sessions</h3>
+        <div class="session-row">
+          <div><p style="font-size:13px;font-weight:500">Chrome · macOS</p><p style="font-size:11px;color:var(--muted)">192.168.1.4 · 2 min ago</p></div>
+          <div style="display:flex;align-items:center;gap:.75rem"><span class="badge badge-success">Current</span><button class="btn btn-ghost" style="font-size:11px;padding:.25rem .65rem" disabled>—</button></div>
+        </div>
+        <div class="session-row">
+          <div><p style="font-size:13px;font-weight:500">Safari · iPhone 15</p><p style="font-size:11px;color:var(--muted)">10.0.0.2 · 1 hr ago</p></div>
+          <div><button class="btn btn-danger" style="font-size:11px;padding:.25rem .65rem" onclick="revokeSession(this,'Safari · iPhone 15')">Revoke</button></div>
+        </div>
+        <div class="session-row">
+          <div><p style="font-size:13px;font-weight:500">Firefox · Ubuntu</p><p style="font-size:11px;color:var(--muted)">172.16.0.8 · 3 hrs ago</p></div>
+          <div><button class="btn btn-danger" style="font-size:11px;padding:.25rem .65rem" onclick="revokeSession(this,'Firefox · Ubuntu')">Revoke</button></div>
+        </div>
+        <hr class="divider">
+        <button class="btn btn-danger" onclick="revokeAll()">Revoke All Other Sessions</button>
+      </div>
+    </div>
+
+    <!-- USERS -->
+    <div id="page-users" class="page">
+      <h1>User Management</h1>
+      <p class="subtitle">All registered users, their status, roles, and MFA state</p>
+      <div class="grid3" style="margin-bottom:1.5rem">
+        <div class="card-sm"><div class="stat-lbl">Total Users</div><div class="stat-val">1,284</div></div>
+        <div class="card-sm"><div class="stat-lbl">MFA Enabled</div><div class="stat-val" style="color:var(--success)">831</div><div style="font-size:11px;color:var(--muted)">64.7%</div><div class="progress-bar"><div class="progress-fill" style="width:64.7%;background:var(--success)"></div></div></div>
+        <div class="card-sm"><div class="stat-lbl">Locked Accounts</div><div class="stat-val" style="color:var(--danger)">12</div></div>
+      </div>
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem">
+          <input type="text" placeholder="Search users…" style="max-width:220px">
+          <button class="btn btn-primary" style="font-size:12px">+ Add User</button>
+        </div>
+        <div class="user-row">
+          <div class="avatar" style="background:rgba(79,142,247,.15);color:#4f8ef7">AM</div>
+          <div style="flex:1"><p style="font-size:13px;font-weight:500">Alex Morgan</p><p style="font-size:11px;color:var(--muted)">alex@example.com</p></div>
+          <span class="badge badge-info" style="margin-right:.5rem">editor</span>
+          <span class="badge badge-success" style="margin-right:.75rem">MFA on</span>
+          <button class="btn btn-ghost" style="font-size:11px;padding:.25rem .65rem">Edit</button>
+        </div>
+        <div class="user-row">
+          <div class="avatar" style="background:rgba(124,92,191,.15);color:#7c5cbf">SK</div>
+          <div style="flex:1"><p style="font-size:13px;font-weight:500">Sam Kim</p><p style="font-size:11px;color:var(--muted)">sam@example.com</p></div>
+          <span class="badge badge-warn" style="margin-right:.5rem">viewer</span>
+          <span class="badge badge-danger" style="margin-right:.75rem">MFA off</span>
+          <button class="btn btn-ghost" style="font-size:11px;padding:.25rem .65rem">Edit</button>
+        </div>
+        <div class="user-row">
+          <div class="avatar" style="background:rgba(34,199,138,.15);color:#22c78a">JP</div>
+          <div style="flex:1"><p style="font-size:13px;font-weight:500">Jamie Park</p><p style="font-size:11px;color:var(--muted)">jamie@example.com</p></div>
+          <span class="badge badge-danger" style="margin-right:.5rem">admin</span>
+          <span class="badge badge-success" style="margin-right:.75rem">MFA on</span>
+          <button class="btn btn-ghost" style="font-size:11px;padding:.25rem .65rem">Edit</button>
+        </div>
+        <div class="user-row" style="border-bottom:none;opacity:.5">
+          <div class="avatar" style="background:rgba(240,92,110,.12);color:#f05c6e">LT</div>
+          <div style="flex:1"><p style="font-size:13px;font-weight:500">Lee Torres <span class="badge badge-danger" style="margin-left:.4rem;font-size:10px">Locked</span></p><p style="font-size:11px;color:var(--muted)">lee@example.com · 5 failed attempts</p></div>
+          <span class="badge badge-danger" style="margin-right:.5rem">viewer</span>
+          <button class="btn btn-success" style="font-size:11px;padding:.25rem .65rem" onclick="toast('Account unlocked for Lee Torres')">Unlock</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="toaster" id="toaster"></div>
+
+<script>
+function nav(id) {
+  document.querySelectorAll('.nav-item').forEach((el,i) => el.classList.toggle('active', ['signup','signin','mfa','reset','rbac','sessions','users'][i] === id));
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+}
+
+function toast(msg, type='info') {
+  const colors = {info:'#4f8ef7', success:'#22c78a', danger:'#f05c6e', warn:'#f0a43a'};
+  const t = document.getElementById('toaster');
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.innerHTML = `<span style="width:7px;height:7px;border-radius:50%;background:${colors[type]};flex-shrink:0"></span>${msg}`;
+  t.appendChild(el);
+  setTimeout(() => el.remove(), 3000);
+}
+
+function checkPwStrength(v) {
+  const bar = document.getElementById('pw-strength');
+  const hint = document.getElementById('pw-hint');
+  let s = 0;
+  if(v.length >= 8) s++;
+  if(v.length >= 12) s++;
+  if(/[A-Z]/.test(v)) s++;
+  if(/[0-9]/.test(v)) s++;
+  if(/[^A-Za-z0-9]/.test(v)) s++;
+  const levels = [[1,'Very weak','#f05c6e'],[2,'Weak','#f0a43a'],[3,'Fair','#f0a43a'],[4,'Strong','#22c78a'],[5,'Very strong','#22c78a']];
+  const l = levels[Math.min(s,5)-1] || levels[0];
+  bar.style.width = (s*20)+'%'; bar.style.background = l[2];
+  hint.textContent = v ? l[1] : 'Enter a password to check strength';
+  hint.style.color = v ? l[2] : 'var(--muted)';
+}
+
+function checkPwStrength2(v) {
+  const bar = document.getElementById('pw-strength2');
+  let s = 0;
+  if(v.length >= 8) s++;
+  if(v.length >= 12) s++;
+  if(/[A-Z]/.test(v)) s++;
+  if(/[0-9]/.test(v)) s++;
+  if(/[^A-Za-z0-9]/.test(v)) s++;
+  const colors = ['#f05c6e','#f05c6e','#f0a43a','#f0a43a','#22c78a','#22c78a'];
+  bar.style.width = (s*20)+'%'; bar.style.background = colors[Math.min(s,5)];
+}
+
+function doSignup() {
+  const pw = document.getElementById('su-pw').value;
+  const cpw = document.getElementById('su-cpw').value;
+  if(!pw) { toast('Please enter a password','danger'); return; }
+  if(pw !== cpw) { toast('Passwords do not match','danger'); return; }
+  toast('Account created! Verification email sent.','success');
+  setTimeout(() => nav('mfa'), 800);
+}
+
+function doSignin() {
+  const el = document.getElementById('signin-alert');
+  const mfa = Math.random() > 0.5;
+  if(mfa) {
+    el.style.display='flex'; el.className='alert alert-info';
+    el.textContent = 'Password verified. Redirecting to MFA...';
+    setTimeout(() => nav('mfa'), 900);
+  } else {
+    el.style.display='flex'; el.className='alert alert-success';
+    el.textContent = 'Signed in! JWT issued. Redirecting...';
+  }
+}
+
+function otpMove(el, n) {
+  if(el.value && n < 6) document.querySelectorAll('.otp-input')[n].focus();
+}
+
+function verifyOtp() {
+  const vals = [...document.querySelectorAll('.otp-input')].map(i=>i.value).join('');
+  if(vals.length < 6) { toast('Enter all 6 digits','warn'); return; }
+  document.getElementById('mfa-step1').style.display='none';
+  document.getElementById('mfa-done').style.display='block';
+  toast('MFA enabled successfully!','success');
+}
+
+function sendReset() {
+  const email = document.getElementById('reset-email').value;
+  if(!email) { toast('Enter your email','warn'); return; }
+  toast('Reset link sent to '+email,'success');
+  document.getElementById('rt-req').style.display='none';
+  document.getElementById('rt-verify').style.display='block';
+  document.querySelectorAll('.tab')[0].classList.remove('active');
+  document.querySelectorAll('.tab')[1].classList.add('active');
+}
+
+function verifyResetToken() {
+  const t = document.getElementById('reset-token').value;
+  if(!t) { toast('Paste your reset token','warn'); return; }
+  document.getElementById('rt-verify').style.display='none';
+  document.getElementById('rt-new').style.display='block';
+  document.querySelectorAll('.tab')[1].classList.remove('active');
+  document.querySelectorAll('.tab')[2].classList.add('active');
+}
+
+function doPasswordReset() {
+  const p = document.getElementById('new-pw').value;
+  const c = document.getElementById('new-cpw').value;
+  if(!p) { toast('Enter a new password','warn'); return; }
+  if(p !== c) { toast('Passwords do not match','danger'); return; }
+  toast('Password updated! All sessions revoked.','success');
+  setTimeout(() => nav('signin'), 1000);
+}
+
+function resetTab(el, id) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+}
+
+function revokeSession(btn, name) {
+  btn.closest('.session-row').style.opacity='.4';
+  btn.disabled=true; btn.textContent='Revoked';
+  toast('Session revoked: '+name,'warn');
+}
+
+function revokeAll() {
+  document.querySelectorAll('.session-row').forEach((r,i) => {
+    if(i>0) { r.style.opacity='.4'; const b=r.querySelector('.btn'); if(b){b.disabled=true;b.textContent='Revoked';}}
+  });
+  toast('All other sessions revoked','warn');
+}
+</script>
+
+</body>
+</html>

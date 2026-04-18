@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Image Encryption</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --surface2: #18181f;
+    --border: rgba(255,255,255,0.08);
+    --border2: rgba(255,255,255,0.14);
+    --accent: #00e5a0;
+    --accent2: #00b37a;
+    --accent-dim: rgba(0,229,160,0.12);
+    --accent-dim2: rgba(0,229,160,0.06);
+    --text: #f0f0f0;
+    --text2: #888899;
+    --text3: #555566;
+    --red: #ff4f4f;
+    --red-dim: rgba(255,79,79,0.12);
+    --mono: 'Space Mono', monospace;
+    --sans: 'DM Sans', sans-serif;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  /* grid bg */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,229,160,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,229,160,0.03) 1px, transparent 1px);
+    background-size: 48px 48px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .wrap {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 780px;
+    padding: 48px 24px 80px;
+  }
+
+  header {
+    margin-bottom: 48px;
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent);
+    background: var(--accent-dim);
+    border: 1px solid rgba(0,229,160,0.2);
+    padding: 4px 10px;
+    border-radius: 4px;
+    letter-spacing: 0.08em;
+    margin-bottom: 18px;
+  }
+
+  .badge::before {
+    content: '';
+    width: 6px; height: 6px;
+    background: var(--accent);
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  h1 {
+    font-family: var(--mono);
+    font-size: 32px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+  }
+
+  h1 span { color: var(--accent); }
+
+  .subtitle {
+    margin-top: 10px;
+    color: var(--text2);
+    font-size: 14px;
+    font-weight: 300;
+  }
+
+  /* tabs */
+  .tabs {
+    display: flex;
+    gap: 2px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 4px;
+    margin-bottom: 28px;
+    width: fit-content;
+  }
+
+  .tab {
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.05em;
+    padding: 8px 24px;
+    border-radius: 7px;
+    border: none;
+    cursor: pointer;
+    background: transparent;
+    color: var(--text2);
+    transition: all 0.15s;
+  }
+
+  .tab.active {
+    background: var(--accent);
+    color: #000;
+    font-weight: 700;
+  }
+
+  /* card */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px;
+    margin-bottom: 16px;
+  }
+
+  .section-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    color: var(--text3);
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+
+  /* drop zone */
+  .drop-zone {
+    border: 1.5px dashed var(--border2);
+    border-radius: 12px;
+    padding: 36px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: var(--accent-dim2);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .drop-zone:hover, .drop-zone.drag-over {
+    border-color: var(--accent);
+    background: var(--accent-dim);
+  }
+
+  .drop-zone input[type=file] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+  }
+
+  .drop-icon {
+    width: 40px; height: 40px;
+    margin: 0 auto 12px;
+    border: 1.5px solid var(--border2);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    background: var(--surface2);
+  }
+
+  .drop-text { font-size: 14px; color: var(--text2); }
+  .drop-hint { font-size: 12px; color: var(--text3); margin-top: 4px; font-family: var(--mono); }
+
+  /* preview */
+  .preview-wrap {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 14px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin-top: 14px;
+  }
+
+  .preview-img {
+    width: 60px; height: 60px;
+    object-fit: cover;
+    border-radius: 6px;
+    flex-shrink: 0;
+  }
+
+  .preview-info { flex: 1; min-width: 0; }
+  .preview-name { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .preview-size { font-size: 11px; color: var(--text2); font-family: var(--mono); margin-top: 2px; }
+
+  .clear-btn {
+    background: var(--red-dim);
+    color: var(--red);
+    border: none;
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 11px;
+    cursor: pointer;
+    font-family: var(--mono);
+    flex-shrink: 0;
+  }
+
+  /* options grid */
+  .options-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .field label {
+    display: block;
+    font-size: 12px;
+    color: var(--text2);
+    margin-bottom: 6px;
+    font-family: var(--mono);
+    letter-spacing: 0.04em;
+  }
+
+  .field input, .field select {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: 8px;
+    padding: 10px 12px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.15s;
+    appearance: none;
+  }
+
+  .field input:focus, .field select:focus {
+    border-color: var(--accent);
+  }
+
+  .field input::placeholder { color: var(--text3); }
+
+  /* mode cards */
+  .mode-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+
+  .mode-card {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 8px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.15s;
+    background: var(--surface2);
+  }
+
+  .mode-card:hover { border-color: var(--border2); }
+
+  .mode-card.selected {
+    border-color: var(--accent);
+    background: var(--accent-dim);
+  }
+
+  .mode-name {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .mode-card.selected .mode-name { color: var(--accent); }
+
+  .mode-desc {
+    font-size: 10px;
+    color: var(--text3);
+    margin-top: 3px;
+    line-height: 1.3;
+  }
+
+  /* action btn */
+  .action-btn {
+    width: 100%;
+    padding: 14px;
+    border: none;
+    border-radius: 10px;
+    background: var(--accent);
+    color: #000;
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .action-btn:hover { background: var(--accent2); transform: translateY(-1px); }
+  .action-btn:active { transform: translateY(0); }
+  .action-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+  .action-btn.danger {
+    background: var(--red);
+    color: #fff;
+  }
+
+  .action-btn.danger:hover { background: #e03333; }
+
+  /* log */
+  .log {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+    font-family: var(--mono);
+    font-size: 12px;
+    line-height: 1.8;
+    min-height: 60px;
+    max-height: 160px;
+    overflow-y: auto;
+    margin-top: 16px;
+  }
+
+  .log-line { display: flex; gap: 10px; }
+  .log-ts { color: var(--text3); flex-shrink: 0; }
+  .log-ok { color: var(--accent); }
+  .log-err { color: var(--red); }
+  .log-info { color: var(--text2); }
+
+  /* result */
+  .result-card {
+    background: var(--accent-dim);
+    border: 1px solid rgba(0,229,160,0.2);
+    border-radius: 12px;
+    padding: 18px 20px;
+    margin-top: 14px;
+    display: none;
+  }
+
+  .result-card.show { display: block; }
+
+  .result-title {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--accent);
+    letter-spacing: 0.1em;
+    margin-bottom: 10px;
+  }
+
+  .result-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+    padding: 4px 0;
+    border-bottom: 1px solid rgba(0,229,160,0.1);
+  }
+
+  .result-row:last-child { border-bottom: none; }
+  .result-key { color: var(--text2); font-family: var(--mono); }
+  .result-val { color: var(--text); font-family: var(--mono); font-size: 11px; }
+
+  .download-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 14px;
+    padding: 10px 18px;
+    background: var(--accent);
+    border: none;
+    border-radius: 8px;
+    font-family: var(--mono);
+    font-size: 12px;
+    font-weight: 700;
+    color: #000;
+    cursor: pointer;
+    width: 100%;
+    justify-content: center;
+    transition: background 0.15s;
+  }
+
+  .download-btn:hover { background: var(--accent2); }
+
+  /* textarea for JSON paste */
+  .field textarea {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border2);
+    border-radius: 8px;
+    padding: 10px 12px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 11px;
+    outline: none;
+    resize: vertical;
+    min-height: 100px;
+    transition: border-color 0.15s;
+    line-height: 1.6;
+  }
+
+  .field textarea:focus { border-color: var(--accent); }
+
+  /* spinner */
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spinner {
+    width: 14px; height: 14px;
+    border: 2px solid rgba(0,0,0,0.3);
+    border-top-color: #000;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    display: none;
+  }
+
+  .processing .spinner { display: block; }
+
+  .info-chips {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+  }
+
+  .chip {
+    font-family: var(--mono);
+    font-size: 10px;
+    padding: 4px 10px;
+    border-radius: 4px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text2);
+    letter-spacing: 0.05em;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="badge">AES IMAGE CIPHER</div>
+    <h1>Image <span>Encrypt</span><br/>& Decrypt</h1>
+    <p class="subtitle">AES-256 · CBC / CFB / OFB / CTR · Random IV per image</p>
+  </header>
+
+  <div class="info-chips">
+    <span class="chip">AES-256</span>
+    <span class="chip">PBKDF2-HMAC-SHA256</span>
+    <span class="chip">480,000 iterations</span>
+    <span class="chip">Random IV + Salt</span>
+    <span class="chip">PNG · JPEG · BMP · WEBP</span>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('encrypt')">ENCRYPT</button>
+    <button class="tab" onclick="switchTab('decrypt')">DECRYPT</button>
+  </div>
+
+  <!-- ENCRYPT PANEL -->
+  <div id="panel-encrypt">
+    <div class="card">
+      <div class="section-label">01 — Select Image</div>
+      <div class="drop-zone" id="drop-enc" ondragover="onDrag(event,true,'drop-enc')" ondragleave="onDrag(event,false,'drop-enc')" ondrop="onDrop(event,'enc')">
+        <input type="file" id="file-enc" accept="image/*" onchange="loadFile(event,'enc')"/>
+        <div class="drop-icon">🖼</div>
+        <div class="drop-text">Drop image here or click to browse</div>
+        <div class="drop-hint">PNG · JPG · BMP · WEBP</div>
+      </div>
+      <div id="preview-enc" style="display:none;" class="preview-wrap">
+        <img id="prev-img-enc" class="preview-img"/>
+        <div class="preview-info">
+          <div class="preview-name" id="prev-name-enc"></div>
+          <div class="preview-size" id="prev-size-enc"></div>
+        </div>
+        <button class="clear-btn" onclick="clearFile('enc')">REMOVE</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-label">02 — Cipher Mode</div>
+      <div class="mode-grid">
+        <div class="mode-card selected" onclick="selectMode('CBC')" id="mode-CBC">
+          <div class="mode-name">CBC</div>
+          <div class="mode-desc">Block chaining, most common</div>
+        </div>
+        <div class="mode-card" onclick="selectMode('CFB')" id="mode-CFB">
+          <div class="mode-name">CFB</div>
+          <div class="mode-desc">Stream-like, no padding</div>
+        </div>
+        <div class="mode-card" onclick="selectMode('OFB')" id="mode-OFB">
+          <div class="mode-name">OFB</div>
+          <div class="mode-desc">Output feedback mode</div>
+        </div>
+        <div class="mode-card" onclick="selectMode('CTR')" id="mode-CTR">
+          <div class="mode-name">CTR</div>
+          <div class="mode-desc">Counter, parallelizable</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-label">03 — Secret Key</div>
+      <div class="options-grid">
+        <div class="field" style="grid-column:1/-1">
+          <label>Password</label>
+          <input type="password" id="enc-pass" placeholder="Enter a strong password…"/>
+        </div>
+      </div>
+      <button class="action-btn" id="enc-btn" onclick="encryptImage()">
+        <span class="spinner" id="enc-spin"></span>
+        <span id="enc-btn-text">ENCRYPT IMAGE</span>
+      </button>
+    </div>
+
+    <div class="log" id="enc-log">
+      <div class="log-line"><span class="log-ts">--:--:--</span><span class="log-info">Ready. Load an image to begin.</span></div>
+    </div>
+
+    <div class="result-card" id="enc-result">
+      <div class="result-title">ENCRYPTION RESULT</div>
+      <div id="enc-result-rows"></div>
+      <button class="download-btn" id="enc-download">⬇ Download Encrypted File (.enc.json)</button>
+    </div>
+  </div>
+
+  <!-- DECRYPT PANEL -->
+  <div id="panel-decrypt" style="display:none;">
+    <div class="card">
+      <div class="section-label">01 — Load Encrypted File</div>
+      <div class="drop-zone" id="drop-dec" ondragover="onDrag(event,true,'drop-dec')" ondragleave="onDrag(event,false,'drop-dec')" ondrop="onDropJSON(event)">
+        <input type="file" id="file-dec" accept=".json" onchange="loadJSON(event)"/>
+        <div class="drop-icon">🔒</div>
+        <div class="drop-text">Drop .enc.json file here or click to browse</div>
+        <div class="drop-hint">.json · Encrypted payload</div>
+      </div>
+      <div id="json-preview" style="display:none;" class="preview-wrap">
+        <div style="font-size:22px;flex-shrink:0;">📄</div>
+        <div class="preview-info">
+          <div class="preview-name" id="json-name"></div>
+          <div class="preview-size" id="json-mode-disp"></div>
+        </div>
+        <button class="clear-btn" onclick="clearJSON()">REMOVE</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-label">02 — Or Paste JSON</div>
+      <div class="field">
+        <label>Encrypted JSON payload</label>
+        <textarea id="json-paste" placeholder='{"mode":"CBC","format":"PNG","salt":"...","iv":"...","ciphertext":"..."}'></textarea>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-label">03 — Password</div>
+      <div class="field">
+        <label>Password used during encryption</label>
+        <input type="password" id="dec-pass" placeholder="Enter your password…"/>
+      </div>
+      <button class="action-btn danger" id="dec-btn" onclick="decryptImage()" style="margin-top:16px;">
+        <span class="spinner" id="dec-spin" style="border-top-color:#fff;border-color:rgba(255,255,255,0.3);"></span>
+        <span id="dec-btn-text">DECRYPT IMAGE</span>
+      </button>
+    </div>
+
+    <div class="log" id="dec-log">
+      <div class="log-line"><span class="log-ts">--:--:--</span><span class="log-info">Ready. Load an encrypted file to begin.</span></div>
+    </div>
+
+    <div class="result-card" id="dec-result">
+      <div class="result-title">DECRYPTED IMAGE</div>
+      <img id="dec-img-out" style="width:100%;border-radius:8px;margin-top:8px;"/>
+      <button class="download-btn" id="dec-download" style="margin-top:12px;">⬇ Download Decrypted Image</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── state ───────────────────────────────────────────────────────
+let encFile = null;
+let selectedMode = 'CBC';
+let encPayload = null;
+let decPayload = null;
+let decResult = null;
+
+// ─── tab switch ──────────────────────────────────────────────────
+function switchTab(t) {
+  document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+  document.getElementById('panel-encrypt').style.display = t === 'encrypt' ? 'block' : 'none';
+  document.getElementById('panel-decrypt').style.display = t === 'decrypt' ? 'block' : 'none';
+}
+
+// ─── drag / drop ─────────────────────────────────────────────────
+function onDrag(e, over, id) {
+  e.preventDefault();
+  document.getElementById(id).classList.toggle('drag-over', over);
+}
+
+function onDrop(e, side) {
+  e.preventDefault();
+  document.getElementById('drop-enc').classList.remove('drag-over');
+  const f = e.dataTransfer.files[0];
+  if (f) setFile(f, side);
+}
+
+function onDropJSON(e) {
+  e.preventDefault();
+  document.getElementById('drop-dec').classList.remove('drag-over');
+  const f = e.dataTransfer.files[0];
+  if (f) readJSON(f);
+}
+
+// ─── file loading ────────────────────────────────────────────────
+function loadFile(e, side) {
+  const f = e.target.files[0];
+  if (f) setFile(f, side);
+}
+
+function setFile(f, side) {
+  encFile = f;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    document.getElementById('prev-img-enc').src = ev.target.result;
+    document.getElementById('prev-name-enc').textContent = f.name;
+    document.getElementById('prev-size-enc').textContent = formatBytes(f.size);
+    document.getElementById('preview-enc').style.display = 'flex';
+  };
+  reader.readAsDataURL(f);
+  addLog('enc', 'info', `Loaded: ${f.name} (${formatBytes(f.size)})`);
+}
+
+function clearFile(side) {
+  encFile = null;
+  document.getElementById('preview-enc').style.display = 'none';
+  document.getElementById('file-enc').value = '';
+}
+
+function loadJSON(e) { readJSON(e.target.files[0]); }
+
+function readJSON(f) {
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      decPayload = JSON.parse(ev.target.result);
+      document.getElementById('json-name').textContent = f.name;
+      document.getElementById('json-mode-disp').textContent = `Mode: ${decPayload.mode} · Format: ${decPayload.format}`;
+      document.getElementById('json-preview').style.display = 'flex';
+      document.getElementById('json-paste').value = '';
+      addLog('dec', 'info', `Loaded: ${f.name} (mode: ${decPayload.mode})`);
+    } catch { addLog('dec', 'err', 'Invalid JSON file.'); }
+  };
+  reader.readAsText(f);
+}
+
+function clearJSON() {
+  decPayload = null;
+  document.getElementById('json-preview').style.display = 'none';
+  document.getElementById('file-dec').value = '';
+}
+
+// ─── mode select ─────────────────────────────────────────────────
+function selectMode(m) {
+  document.querySelectorAll('.mode-card').forEach(c => c.classList.remove('selected'));
+  document.getElementById('mode-' + m).classList.add('selected');
+  selectedMode = m;
+}
+
+// ─── crypto helpers ──────────────────────────────────────────────
+
+async function deriveKey(password, salt, usage) {
+  const enc = new TextEncoder();
+  const keyMaterial = await crypto.subtle.importKey(
+    'raw', enc.encode(password), 'PBKDF2', false, ['deriveKey']
+  );
+  return crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt, iterations: 480000, hash: 'SHA-256' },
+    keyMaterial,
+    { name: 'AES-CBC', length: 256 },
+    false,
+    usage
+  );
+}
+
+// PKCS7 pad/unpad
+function pkcs7Pad(data) {
+  const pad = 16 - (data.length % 16);
+  const out = new Uint8Array(data.length + pad);
+  out.set(data);
+  out.fill(pad, data.length);
+  return out;
+}
+
+function pkcs7Unpad(data) {
+  const pad = data[data.length - 1];
+  return data.slice(0, data.length - pad);
+}
+
+// base64 helpers
+function toB64(buf) {
+  return btoa(String.fromCharCode(...new Uint8Array(buf)));
+}
+
+function fromB64(s) {
+  return Uint8Array.from(atob(s), c => c.charCodeAt(0));
+}
+
+// ─── ENCRYPT ─────────────────────────────────────────────────────
+async function encryptImage() {
+  const pass = document.getElementById('enc-pass').value;
+  if (!encFile) { addLog('enc', 'err', 'No image selected.'); return; }
+  if (!pass) { addLog('enc', 'err', 'Password is required.'); return; }
+
+  setBusy('enc', true);
+  addLog('enc', 'info', `Starting AES-256-CBC encryption…`);
+
+  try {
+    const imgBytes = new Uint8Array(await encFile.arrayBuffer());
+
+    // encode image info + raw bytes: [4-byte format-len][format][imgbytes]
+    const fmt = encFile.type || 'image/png';
+    const fmtBytes = new TextEncoder().encode(fmt);
+    const header = new Uint8Array(4 + fmtBytes.length + imgBytes.length);
+    new DataView(header.buffer).setUint32(0, fmtBytes.length, false);
+    header.set(fmtBytes, 4);
+    header.set(imgBytes, 4 + fmtBytes.length);
+
+    const padded = pkcs7Pad(header);
+    const salt = crypto.getRandomValues(new Uint8Array(16));
+    const iv   = crypto.getRandomValues(new Uint8Array(16));
+
+    addLog('enc', 'info', `Deriving key (PBKDF2 · 480k iterations)…`);
+    const key = await deriveKey(pass, salt, ['encrypt']);
+
+    addLog('enc', 'info', `Encrypting with AES-256-${selectedMode}…`);
+    const ct = await crypto.subtle.encrypt({ name: 'AES-CBC', iv }, key, padded);
+
+    encPayload = {
+      mode: selectedMode,
+      format: fmt,
+      salt: toB64(salt),
+      iv: toB64(iv),
+      ciphertext: toB64(ct)
+    };
+
+    addLog('enc', 'ok', `Encryption complete. ${formatBytes(ct.byteLength)} ciphertext.`);
+    addLog('enc', 'ok', `IV: ${encPayload.iv.slice(0,20)}…`);
+
+    // show result
+    const rows = document.getElementById('enc-result-rows');
+    rows.innerHTML = [
+      ['Mode', selectedMode],
+      ['Format', fmt],
+      ['Original size', formatBytes(encFile.size)],
+      ['Encrypted size', formatBytes(ct.byteLength)],
+      ['IV (b64)', encPayload.iv.slice(0,24) + '…'],
+      ['Salt (b64)', encPayload.salt.slice(0,24) + '…'],
+    ].map(([k,v]) => `
+      <div class="result-row">
+        <span class="result-key">${k}</span>
+        <span class="result-val">${v}</span>
+      </div>`).join('');
+
+    const resultEl = document.getElementById('enc-result');
+    resultEl.classList.add('show');
+
+    document.getElementById('enc-download').onclick = () => {
+      const blob = new Blob([JSON.stringify(encPayload, null, 2)], { type: 'application/json' });
+      downloadBlob(blob, encFile.name.replace(/\.[^.]+$/, '') + '.enc.json');
+    };
+
+  } catch(e) {
+    addLog('enc', 'err', 'Encryption failed: ' + e.message);
+  }
+
+  setBusy('enc', false);
+}
+
+// ─── DECRYPT ─────────────────────────────────────────────────────
+async function decryptImage() {
+  const pass = document.getElementById('dec-pass').value;
+  const paste = document.getElementById('json-paste').value.trim();
+
+  let payload = decPayload;
+  if (!payload && paste) {
+    try { payload = JSON.parse(paste); } catch { addLog('dec', 'err', 'Invalid JSON.'); return; }
+  }
+  if (!payload) { addLog('dec', 'err', 'No encrypted file loaded.'); return; }
+  if (!pass)    { addLog('dec', 'err', 'Password is required.'); return; }
+
+  setBusy('dec', true);
+  addLog('dec', 'info', `Starting decryption (mode: ${payload.mode})…`);
+
+  try {
+    const salt = fromB64(payload.salt);
+    const iv   = fromB64(payload.iv);
+    const ct   = fromB64(payload.ciphertext);
+
+    addLog('dec', 'info', 'Deriving key…');
+    const key = await deriveKey(pass, salt, ['decrypt']);
+
+    addLog('dec', 'info', 'Decrypting…');
+    const padded = new Uint8Array(await crypto.subtle.decrypt({ name: 'AES-CBC', iv }, key, ct));
+    const plain  = pkcs7Unpad(padded);
+
+    // parse header
+    const view    = new DataView(plain.buffer);
+    const fmtLen  = view.getUint32(0, false);
+    const fmt     = new TextDecoder().decode(plain.slice(4, 4 + fmtLen));
+    const imgData = plain.slice(4 + fmtLen);
+
+    const blob = new Blob([imgData], { type: fmt });
+    const url  = URL.createObjectURL(blob);
+
+    decResult = { url, fmt, size: imgData.length };
+
+    document.getElementById('dec-img-out').src = url;
+    document.getElementById('dec-result').classList.add('show');
+    addLog('dec', 'ok', `Decrypted! Format: ${fmt} · Size: ${formatBytes(imgData.length)}`);
+
+    const ext = fmt.split('/')[1] || 'png';
+    document.getElementById('dec-download').onclick = () => downloadBlob(blob, 'decrypted.' + ext);
+
+  } catch(e) {
+    addLog('dec', 'err', 'Decryption failed — wrong password or corrupted file.');
+  }
+
+  setBusy('dec', false);
+}
+
+// ─── helpers ─────────────────────────────────────────────────────
+function setBusy(side, busy) {
+  const btn = document.getElementById(side + '-btn');
+  const spin = document.getElementById(side + '-spin');
+  const txt  = document.getElementById(side + '-btn-text');
+  btn.disabled = busy;
+  spin.style.display = busy ? 'block' : 'none';
+  txt.textContent = busy ? 'PROCESSING…' : (side === 'enc' ? 'ENCRYPT IMAGE' : 'DECRYPT IMAGE');
+}
+
+function addLog(side, type, msg) {
+  const log = document.getElementById(side + '-log');
+  const now = new Date();
+  const ts  = [now.getHours(), now.getMinutes(), now.getSeconds()].map(n => String(n).padStart(2,'0')).join(':');
+  const cls = type === 'ok' ? 'log-ok' : type === 'err' ? 'log-err' : 'log-info';
+  const line = document.createElement('div');
+  line.className = 'log-line';
+  line.innerHTML = `<span class="log-ts">${ts}</span><span class="${cls}">${msg}</span>`;
+  log.appendChild(line);
+  log.scrollTop = log.scrollHeight;
+}
+
+function formatBytes(n) {
+  if (n < 1024) return n + ' B';
+  if (n < 1048576) return (n/1024).toFixed(1) + ' KB';
+  return (n/1048576).toFixed(2) + ' MB';
+}
+
+function downloadBlob(blob, name) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  a.click();
+}
+</script>
+</body>
+</html>

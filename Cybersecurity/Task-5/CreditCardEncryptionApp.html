@@ -1,0 +1,1061 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>CardVault — PAN Encryption & Tokenization</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #f5f4f0;
+  --s1: #ffffff;
+  --s2: #f0efe9;
+  --s3: #e8e7e0;
+  --border: rgba(0,0,0,0.08);
+  --border2: rgba(0,0,0,0.14);
+  --acc: #1a1a2e;
+  --acc2: #16213e;
+  --gold: #c9a84c;
+  --gold2: #a8893d;
+  --gold-dim: rgba(201,168,76,0.12);
+  --green: #1a7a4a;
+  --green-dim: rgba(26,122,74,0.1);
+  --red: #c0392b;
+  --red-dim: rgba(192,57,43,0.1);
+  --amber: #b7791f;
+  --amber-dim: rgba(183,121,31,0.1);
+  --text: #1a1a2e;
+  --text2: #6b6b80;
+  --text3: #b0b0bf;
+  --mono: 'Courier New', monospace;
+  --sans: 'Segoe UI', system-ui, sans-serif;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background:
+    linear-gradient(135deg, rgba(201,168,76,0.04) 0%, transparent 60%),
+    repeating-linear-gradient(0deg, transparent, transparent 39px, rgba(0,0,0,0.03) 40px),
+    repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(0,0,0,0.03) 40px);
+  pointer-events: none; z-index: 0;
+}
+
+.wrap {
+  position: relative; z-index: 1;
+  width: 100%; max-width: 900px;
+  padding: 40px 20px 80px;
+}
+
+/* ── header ── */
+.header {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  margin-bottom: 36px;
+}
+
+.logo-row { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+.logo-mark {
+  width: 42px; height: 42px; border-radius: 10px;
+  background: var(--acc); color: var(--gold);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; font-weight: 900; letter-spacing: -1px;
+}
+.logo-name { font-size: 24px; font-weight: 700; letter-spacing: -0.03em; color: var(--acc); }
+.logo-name span { color: var(--gold); }
+.tagline { font-size: 12px; color: var(--text2); }
+.pci-badge {
+  display: flex; align-items: center; gap: 6px;
+  background: var(--acc); color: var(--gold);
+  padding: 8px 14px; border-radius: 8px;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.08em;
+}
+
+/* ── card visual ── */
+.card-preview-wrap {
+  margin-bottom: 28px;
+  perspective: 1000px;
+}
+.card-visual {
+  width: 100%; max-width: 380px;
+  aspect-ratio: 1.586;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+  border-radius: 16px;
+  padding: 24px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(26,26,46,0.25), 0 4px 16px rgba(0,0,0,0.15);
+  transition: transform 0.4s;
+  cursor: default;
+}
+.card-visual:hover { transform: rotateY(-4deg) rotateX(2deg); }
+.card-visual::before {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(135deg, rgba(201,168,76,0.15) 0%, transparent 60%);
+}
+.card-visual::after {
+  content: '';
+  position: absolute;
+  width: 260px; height: 260px; border-radius: 50%;
+  background: rgba(255,255,255,0.04);
+  top: -80px; right: -80px;
+}
+.card-chip {
+  width: 42px; height: 32px;
+  background: linear-gradient(135deg, #c9a84c, #a8893d);
+  border-radius: 5px; margin-bottom: 20px;
+  position: relative; z-index: 1;
+}
+.card-chip::before {
+  content: ''; position: absolute;
+  inset: 4px; border-radius: 3px;
+  border: 1px solid rgba(255,255,255,0.3);
+}
+.card-number {
+  font-family: var(--mono);
+  font-size: 18px; letter-spacing: 0.14em;
+  color: rgba(255,255,255,0.9);
+  margin-bottom: 20px;
+  position: relative; z-index: 1;
+}
+.card-bottom {
+  display: flex; justify-content: space-between; align-items: flex-end;
+  position: relative; z-index: 1;
+}
+.card-label { font-size: 9px; color: rgba(255,255,255,0.4); letter-spacing: 0.1em; text-transform: uppercase; }
+.card-value { font-size: 14px; color: rgba(255,255,255,0.85); font-weight: 500; margin-top: 2px; font-family: var(--mono); }
+.card-brand {
+  font-size: 20px; font-weight: 900; color: var(--gold);
+  letter-spacing: -1px;
+}
+.masked { color: rgba(255,255,255,0.4); }
+
+/* ── tabs ── */
+.tabs {
+  display: flex; gap: 3px;
+  background: var(--s1); border: 1px solid var(--border);
+  border-radius: 12px; padding: 4px;
+  margin-bottom: 24px; width: fit-content;
+}
+.tab {
+  padding: 9px 22px; border-radius: 9px; border: none;
+  background: transparent; color: var(--text2);
+  font-size: 12px; font-weight: 700; cursor: pointer;
+  letter-spacing: 0.06em; transition: all 0.15s;
+}
+.tab.active { background: var(--acc); color: #fff; }
+
+/* ── layout ── */
+.main-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+@media(max-width:640px){ .main-grid{grid-template-columns:1fr;} }
+
+/* ── card component ── */
+.panel {
+  background: var(--s1);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+}
+.panel-head {
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 10px;
+  background: var(--s2);
+}
+.panel-title {
+  font-size: 11px; font-weight: 700;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--text2);
+}
+.panel-body { padding: 20px; }
+
+/* ── fields ── */
+.field { margin-bottom: 16px; }
+.field label {
+  display: block; font-size: 11px; font-weight: 700;
+  color: var(--text2); margin-bottom: 6px;
+  letter-spacing: 0.07em; text-transform: uppercase;
+}
+.field input, .field select {
+  width: 100%; background: var(--bg);
+  border: 1.5px solid var(--border2);
+  border-radius: 9px; padding: 11px 14px;
+  color: var(--text); font-size: 14px;
+  font-family: var(--mono);
+  outline: none; transition: border-color 0.15s;
+  appearance: none;
+}
+.field input:focus, .field select:focus { border-color: var(--acc); }
+.field input::placeholder { color: var(--text3); font-family: var(--mono); }
+
+.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+/* ── buttons ── */
+.btn {
+  width: 100%; padding: 13px;
+  border: none; border-radius: 10px;
+  font-size: 13px; font-weight: 700;
+  letter-spacing: 0.05em; cursor: pointer;
+  transition: all 0.15s;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+.btn-dark { background: var(--acc); color: #fff; }
+.btn-dark:hover { background: var(--acc2); transform: translateY(-1px); }
+.btn-dark:disabled { opacity:.4; cursor:not-allowed; transform:none; }
+.btn-gold { background: var(--gold); color: #fff; }
+.btn-gold:hover { background: var(--gold2); transform: translateY(-1px); }
+.btn-outline {
+  background: transparent; color: var(--text2);
+  border: 1.5px solid var(--border2); margin-top: 8px;
+}
+.btn-outline:hover { background: var(--s2); }
+
+/* ── result box ── */
+.result-box {
+  background: var(--s2); border: 1px solid var(--border);
+  border-radius: 10px; padding: 14px 16px;
+  margin-top: 14px; display: none;
+}
+.result-box.show { display: block; }
+.result-box.ok  { border-color: rgba(26,122,74,.3); background: var(--green-dim); }
+.result-box.err { border-color: rgba(192,57,43,.3); background: var(--red-dim); }
+
+.result-label {
+  font-size: 10px; font-weight: 700;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  margin-bottom: 10px;
+}
+.result-label.ok  { color: var(--green); }
+.result-label.err { color: var(--red); }
+
+.result-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 5px 0; border-bottom: 1px solid var(--border);
+  font-size: 12px;
+}
+.result-row:last-child { border-bottom: none; }
+.result-key { color: var(--text2); }
+.result-val {
+  font-family: var(--mono); font-size: 11px;
+  color: var(--text); max-width: 200px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.copy-btn {
+  background: var(--s3); border: none; border-radius: 5px;
+  padding: 3px 8px; font-size: 10px; cursor: pointer;
+  color: var(--text2); transition: all .15s; margin-left: 6px; white-space: nowrap;
+}
+.copy-btn:hover { background: var(--acc); color: #fff; }
+
+/* ── token vault ── */
+.vault-header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 14px;
+}
+.vault-count {
+  font-size: 12px; font-weight: 700;
+  font-family: var(--mono); color: var(--text2);
+}
+.token-list { display: flex; flex-direction: column; gap: 8px; max-height: 380px; overflow-y: auto; }
+.token-item {
+  background: var(--s2); border: 1px solid var(--border);
+  border-radius: 10px; padding: 12px 14px;
+  transition: border-color .15s;
+}
+.token-item:hover { border-color: var(--border2); }
+.token-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.token-id {
+  font-family: var(--mono); font-size: 11px;
+  background: var(--acc); color: #fff;
+  padding: 2px 8px; border-radius: 4px;
+}
+.token-ts { font-size: 10px; color: var(--text3); font-family: var(--mono); }
+.token-pan {
+  font-family: var(--mono); font-size: 14px;
+  color: var(--acc); letter-spacing: .12em; margin-bottom: 4px;
+}
+.token-actions { display: flex; gap: 6px; margin-top: 8px; }
+.ta-btn {
+  padding: 4px 10px; border: none; border-radius: 5px;
+  font-size: 10px; font-weight: 700; cursor: pointer; transition: all .15s;
+  letter-spacing: .05em;
+}
+.ta-dec { background: var(--green-dim); color: var(--green); }
+.ta-dec:hover { background: var(--green); color: #fff; }
+.ta-del { background: var(--red-dim); color: var(--red); }
+.ta-del:hover { background: var(--red); color: #fff; }
+.ta-copy { background: var(--s3); color: var(--text2); }
+.ta-copy:hover { background: var(--acc); color: #fff; }
+
+/* ── security info ── */
+.sec-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; }
+.sec-item {
+  background: var(--s2); border: 1px solid var(--border);
+  border-radius: 8px; padding: 10px 12px;
+}
+.sec-item-label { font-size: 10px; color: var(--text3); font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.sec-item-val { font-size: 12px; font-family: var(--mono); color: var(--acc); margin-top: 3px; font-weight: 700; }
+
+/* ── log ── */
+.log {
+  background: var(--s2); border: 1px solid var(--border);
+  border-radius: 8px; padding: 10px 12px;
+  font-family: var(--mono); font-size: 11px;
+  line-height: 1.9; max-height: 130px; overflow-y: auto;
+  margin-top: 12px;
+}
+.log-line { display: flex; gap: 10px; }
+.l-ts  { color: var(--text3); flex-shrink: 0; }
+.l-ok  { color: var(--green); }
+.l-err { color: var(--red); }
+.l-inf { color: var(--text2); }
+.l-warn{ color: var(--amber); }
+
+/* ── toast ── */
+.toast {
+  position: fixed; bottom: 28px; left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: var(--acc); color: #fff;
+  padding: 10px 20px; border-radius: 10px;
+  font-size: 13px; font-weight: 600;
+  opacity: 0; transition: all .3s; z-index: 999;
+  pointer-events: none;
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ── masking badge ── */
+.mask-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: var(--amber-dim); border: 1px solid rgba(183,121,31,.2);
+  color: var(--amber); padding: 4px 10px; border-radius: 5px;
+  font-size: 10px; font-weight: 700; letter-spacing: .08em;
+  margin-bottom: 14px;
+}
+
+/* spinner */
+@keyframes spin{to{transform:rotate(360deg)}}
+.spinner{
+  width:13px;height:13px;border-radius:50%;
+  border:2px solid rgba(255,255,255,.2);border-top-color:#fff;
+  animation:spin .7s linear infinite;display:none;
+}
+.busy .spinner{display:block;}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <!-- header -->
+  <div class="header">
+    <div class="header-left">
+      <div class="logo-row">
+        <div class="logo-mark">CV</div>
+        <div class="logo-name">Card<span>Vault</span></div>
+      </div>
+      <div class="tagline">PAN Encryption · Tokenization · Format-Preserving · Never stores raw PANs</div>
+    </div>
+    <div class="pci-badge">🔒 PCI-DSS SAFE</div>
+  </div>
+
+  <!-- card preview -->
+  <div class="card-preview-wrap">
+    <div class="card-visual">
+      <div class="card-chip"></div>
+      <div class="card-number" id="card-num-display">•••• •••• •••• ••••</div>
+      <div class="card-bottom">
+        <div>
+          <div class="card-label">Card Holder</div>
+          <div class="card-value" id="card-name-display">YOUR NAME</div>
+        </div>
+        <div>
+          <div class="card-label">Expires</div>
+          <div class="card-value" id="card-exp-display">MM/YY</div>
+        </div>
+        <div class="card-brand" id="card-brand-display">VISA</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- tabs -->
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('encrypt')">ENCRYPT & TOKENIZE</button>
+    <button class="tab" onclick="switchTab('decrypt')">DECRYPT</button>
+    <button class="tab" onclick="switchTab('vault')">TOKEN VAULT</button>
+  </div>
+
+  <!-- ENCRYPT PANEL -->
+  <div id="panel-encrypt">
+    <div class="main-grid">
+      <div>
+        <div class="panel">
+          <div class="panel-head"><div class="panel-title">💳 Card Details</div></div>
+          <div class="panel-body">
+            <div class="mask-badge">⚠ Raw PAN never persisted — masked on entry</div>
+            <div class="field">
+              <label>Primary Account Number (PAN)</label>
+              <input type="text" id="enc-pan" placeholder="1234 5678 9012 3456"
+                maxlength="19" oninput="formatPAN(this)" onchange="updateCardPreview()"/>
+            </div>
+            <div class="field-row">
+              <div class="field">
+                <label>Cardholder Name</label>
+                <input type="text" id="enc-name" placeholder="JOHN DOE" style="font-family:var(--sans);"
+                  oninput="updateCardPreview()"/>
+              </div>
+              <div class="field">
+                <label>Expiry (MM/YY)</label>
+                <input type="text" id="enc-exp" placeholder="12/28" maxlength="5"
+                  oninput="formatExp(this);updateCardPreview()"/>
+              </div>
+            </div>
+            <div class="field-row">
+              <div class="field">
+                <label>CVV</label>
+                <input type="password" id="enc-cvv" placeholder="•••" maxlength="4"/>
+              </div>
+              <div class="field">
+                <label>Encryption Key</label>
+                <input type="password" id="enc-key" placeholder="Secret key…"/>
+              </div>
+            </div>
+            <div class="field">
+              <label>Cipher Mode</label>
+              <select id="enc-mode">
+                <option value="AES-GCM">AES-256-GCM (Authenticated, Recommended)</option>
+                <option value="AES-CBC">AES-256-CBC (Block cipher + PKCS7)</option>
+              </select>
+            </div>
+            <button class="btn btn-dark" id="enc-btn" onclick="encryptCard()">
+              <span class="spinner" id="enc-spin"></span>
+              Encrypt &amp; Tokenize PAN
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:16px;">
+        <div class="panel">
+          <div class="panel-head"><div class="panel-title">🔐 Security Info</div></div>
+          <div class="panel-body">
+            <div class="sec-grid">
+              <div class="sec-item">
+                <div class="sec-item-label">Key Derivation</div>
+                <div class="sec-item-val">PBKDF2</div>
+              </div>
+              <div class="sec-item">
+                <div class="sec-item-label">Hash</div>
+                <div class="sec-item-val">SHA-256</div>
+              </div>
+              <div class="sec-item">
+                <div class="sec-item-label">Iterations</div>
+                <div class="sec-item-val">310,000</div>
+              </div>
+              <div class="sec-item">
+                <div class="sec-item-label">Key Size</div>
+                <div class="sec-item-val">256-bit</div>
+              </div>
+              <div class="sec-item">
+                <div class="sec-item-label">Token Format</div>
+                <div class="sec-item-val">UUID v4</div>
+              </div>
+              <div class="sec-item">
+                <div class="sec-item-label">Masking</div>
+                <div class="sec-item-val">Last 4 only</div>
+              </div>
+            </div>
+            <div class="log" id="enc-log">
+              <div class="log-line"><span class="l-ts">--:--:--</span><span class="l-inf">Ready. Enter card details to encrypt.</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="result-box" id="enc-result">
+          <div class="result-label ok">ENCRYPTION RESULT</div>
+          <div id="enc-result-rows"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DECRYPT PANEL -->
+  <div id="panel-decrypt" style="display:none;">
+    <div class="main-grid">
+      <div class="panel">
+        <div class="panel-head"><div class="panel-title">🔓 Decrypt PAN</div></div>
+        <div class="panel-body">
+          <div class="field">
+            <label>Token or Ciphertext (base64)</label>
+            <input type="text" id="dec-token" placeholder="Paste token UUID or base64 ciphertext…" style="font-size:12px;"/>
+          </div>
+          <div class="field">
+            <label>Decryption Key</label>
+            <input type="password" id="dec-key" placeholder="Same key used for encryption…"/>
+          </div>
+          <div class="field">
+            <label>Cipher Mode</label>
+            <select id="dec-mode">
+              <option value="AES-GCM">AES-256-GCM</option>
+              <option value="AES-CBC">AES-256-CBC</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>IV / Nonce (base64, from encryption result)</label>
+            <input type="text" id="dec-iv" placeholder="Paste IV/nonce from encryption…" style="font-size:12px;"/>
+          </div>
+          <div class="field" id="dec-tag-field">
+            <label>Auth Tag (base64, GCM only)</label>
+            <input type="text" id="dec-tag" placeholder="Paste auth tag from encryption…" style="font-size:12px;"/>
+          </div>
+          <button class="btn btn-gold" id="dec-btn" onclick="decryptCard()">
+            <span class="spinner" id="dec-spin" style="border-top-color:#fff;border-color:rgba(255,255,255,.2);"></span>
+            Decrypt PAN
+          </button>
+          <div class="log" id="dec-log" style="margin-top:14px;">
+            <div class="log-line"><span class="l-ts">--:--:--</span><span class="l-inf">Paste ciphertext and key to decrypt.</span></div>
+          </div>
+          <div class="result-box" id="dec-result">
+            <div class="result-label ok">DECRYPTED RESULT</div>
+            <div id="dec-result-rows"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><div class="panel-title">📋 Quick Token Lookup</div></div>
+        <div class="panel-body">
+          <p style="font-size:12px;color:var(--text2);margin-bottom:14px;line-height:1.6;">
+            Select a token from the vault to auto-fill decryption fields, then enter your key.
+          </p>
+          <div id="dec-vault-list" style="display:flex;flex-direction:column;gap:8px;max-height:340px;overflow-y:auto;">
+            <div style="font-size:12px;color:var(--text3);text-align:center;padding:16px;">No tokens in vault yet.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- VAULT PANEL -->
+  <div id="panel-vault" style="display:none;">
+    <div class="panel">
+      <div class="panel-head">
+        <div class="panel-title">🏛 Token Vault</div>
+      </div>
+      <div class="panel-body">
+        <div class="vault-header">
+          <span class="vault-count" id="vault-count">0 tokens stored</span>
+          <button class="btn btn-outline" style="width:auto;padding:6px 14px;font-size:11px;" onclick="clearVault()">Clear All</button>
+        </div>
+        <div class="token-list" id="token-list">
+          <div style="font-size:13px;color:var(--text3);text-align:center;padding:32px;">
+            No tokens stored. Encrypt a card to create tokens.
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ════════════════════════════════════════════════════════════════
+//  VAULT STORAGE (in-memory, never persisted to localStorage)
+// ════════════════════════════════════════════════════════════════
+const VAULT = [];  // { token, maskedPAN, last4, name, exp, ciphertext, iv, tag, mode, salt, createdAt }
+
+// ════════════════════════════════════════════════════════════════
+//  UTILS
+// ════════════════════════════════════════════════════════════════
+function ts() {
+  const n = new Date();
+  return [n.getHours(),n.getMinutes(),n.getSeconds()].map(x=>String(x).padStart(2,'0')).join(':');
+}
+function log(id, msg, type='inf') {
+  const el = document.getElementById(id);
+  const d = document.createElement('div');
+  d.className = 'log-line';
+  d.innerHTML = `<span class="l-ts">${ts()}</span><span class="l-${type}">${msg}</span>`;
+  el.appendChild(d); el.scrollTop = el.scrollHeight;
+}
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+function copyText(str) {
+  navigator.clipboard.writeText(str).then(() => toast('Copied to clipboard!'));
+}
+function uuid() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+    const r = crypto.getRandomValues(new Uint8Array(1))[0] % 16;
+    return (c==='x' ? r : (r&0x3|0x8)).toString(16);
+  });
+}
+function toB64(buf) { return btoa(String.fromCharCode(...new Uint8Array(buf))); }
+function fromB64(s) { return Uint8Array.from(atob(s), c=>c.charCodeAt(0)); }
+function maskPAN(pan) {
+  const clean = pan.replace(/\s/g,'');
+  const last4 = clean.slice(-4);
+  return '•••• •••• •••• ' + last4;
+}
+function detectBrand(pan) {
+  const n = pan.replace(/\s/g,'');
+  if (/^4/.test(n)) return 'VISA';
+  if (/^5[1-5]|^2[2-7]/.test(n)) return 'MASTERCARD';
+  if (/^3[47]/.test(n)) return 'AMEX';
+  if (/^6011|^65/.test(n)) return 'DISCOVER';
+  return 'CARD';
+}
+function luhnCheck(pan) {
+  const digits = pan.replace(/\s/g,'').split('').reverse().map(Number);
+  const sum = digits.reduce((acc,d,i) => {
+    if (i%2===1) { d*=2; if(d>9) d-=9; }
+    return acc+d;
+  },0);
+  return sum%10===0;
+}
+
+// ════════════════════════════════════════════════════════════════
+//  INPUT FORMATTING
+// ════════════════════════════════════════════════════════════════
+function formatPAN(input) {
+  let v = input.value.replace(/\D/g,'').slice(0,16);
+  input.value = v.replace(/(.{4})/g,'$1 ').trim();
+}
+function formatExp(input) {
+  let v = input.value.replace(/\D/g,'').slice(0,4);
+  if (v.length>=2) v = v.slice(0,2)+'/'+v.slice(2);
+  input.value = v;
+}
+
+// ════════════════════════════════════════════════════════════════
+//  CARD PREVIEW
+// ════════════════════════════════════════════════════════════════
+function updateCardPreview() {
+  const pan  = document.getElementById('enc-pan').value;
+  const name = document.getElementById('enc-name').value;
+  const exp  = document.getElementById('enc-exp').value;
+  const clean = pan.replace(/\s/g,'');
+
+  if (clean.length === 16) {
+    document.getElementById('card-num-display').textContent = maskPAN(pan);
+  } else if (pan) {
+    document.getElementById('card-num-display').textContent = pan + ' ' + '•'.repeat(Math.max(0,16-clean.length));
+  } else {
+    document.getElementById('card-num-display').textContent = '•••• •••• •••• ••••';
+  }
+  document.getElementById('card-name-display').textContent = name.toUpperCase() || 'YOUR NAME';
+  document.getElementById('card-exp-display').textContent  = exp || 'MM/YY';
+  document.getElementById('card-brand-display').textContent = detectBrand(pan);
+}
+
+// ════════════════════════════════════════════════════════════════
+//  KEY DERIVATION
+// ════════════════════════════════════════════════════════════════
+async function deriveKey(password, salt, mode) {
+  const enc = new TextEncoder();
+  const raw = await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, ['deriveKey']);
+  const algo = mode === 'AES-GCM' ? { name:'AES-GCM', length:256 } : { name:'AES-CBC', length:256 };
+  return crypto.subtle.deriveKey(
+    { name:'PBKDF2', salt, iterations:310000, hash:'SHA-256' },
+    raw, algo, false, ['encrypt','decrypt']
+  );
+}
+
+// ════════════════════════════════════════════════════════════════
+//  PKCS7 helpers (CBC)
+// ════════════════════════════════════════════════════════════════
+function pkcs7Pad(data) {
+  const pad = 16 - (data.length % 16);
+  const out = new Uint8Array(data.length + pad);
+  out.set(data); out.fill(pad, data.length); return out;
+}
+function pkcs7Unpad(data) {
+  const pad = data[data.length-1]; return data.slice(0, data.length-pad);
+}
+
+// ════════════════════════════════════════════════════════════════
+//  ENCRYPT
+// ════════════════════════════════════════════════════════════════
+async function encryptCard() {
+  const panRaw = document.getElementById('enc-pan').value.replace(/\s/g,'');
+  const name   = document.getElementById('enc-name').value.trim();
+  const exp    = document.getElementById('enc-exp').value.trim();
+  const cvv    = document.getElementById('enc-cvv').value.trim();
+  const pass   = document.getElementById('enc-key').value;
+  const mode   = document.getElementById('enc-mode').value;
+
+  if (panRaw.length < 13 || panRaw.length > 19) { log('enc-log','PAN must be 13–19 digits.','err'); return; }
+  if (!pass) { log('enc-log','Encryption key is required.','err'); return; }
+  if (!luhnCheck(panRaw)) { log('enc-log','Warning: PAN fails Luhn check (invalid card number).','warn'); }
+
+  const btn = document.getElementById('enc-btn');
+  btn.disabled = true; btn.classList.add('busy');
+
+  log('enc-log', `Encrypting PAN (${mode})…`);
+  log('enc-log', 'Deriving 256-bit key via PBKDF2-SHA256 (310k iter)…');
+
+  try {
+    const salt = crypto.getRandomValues(new Uint8Array(16));
+    const iv   = crypto.getRandomValues(new Uint8Array(mode==='AES-GCM' ? 12 : 16));
+    const key  = await deriveKey(pass, salt, mode);
+
+    const enc  = new TextEncoder();
+    // payload = PAN + metadata JSON (PAN is the sensitive part)
+    const payload = enc.encode(JSON.stringify({ pan: panRaw, name, exp }));
+
+    let ct, tag='';
+    if (mode === 'AES-GCM') {
+      const raw = await crypto.subtle.encrypt({ name:'AES-GCM', iv, tagLength:128 }, key, payload);
+      // GCM appends 16-byte tag at end
+      const full = new Uint8Array(raw);
+      ct  = full.slice(0, full.length-16);
+      tag = toB64(full.slice(full.length-16));
+    } else {
+      const padded = pkcs7Pad(payload);
+      const raw = await crypto.subtle.encrypt({ name:'AES-CBC', iv }, key, padded);
+      ct = new Uint8Array(raw);
+    }
+
+    const token   = uuid();
+    const last4   = panRaw.slice(-4);
+    const masked  = '************' + last4;
+
+    const entry = {
+      token, maskedPAN: masked, last4, name, exp,
+      ciphertext: toB64(ct), iv: toB64(iv),
+      tag, salt: toB64(salt), mode,
+      brand: detectBrand(panRaw),
+      createdAt: new Date().toLocaleString()
+    };
+    VAULT.push(entry);
+
+    log('enc-log', `Token generated: ${token.slice(0,18)}…`, 'ok');
+    log('enc-log', `Masked PAN: ${masked}`, 'ok');
+    log('enc-log', `Ciphertext: ${entry.ciphertext.slice(0,24)}… (${ct.length} bytes)`, 'ok');
+
+    // show result
+    const rows = [
+      ['Token',      token,                 true],
+      ['Masked PAN', masked,                false],
+      ['Last 4',     last4,                 false],
+      ['Mode',       mode,                  false],
+      ['Ciphertext', entry.ciphertext,      true],
+      ['IV / Nonce', entry.iv,              true],
+      ...(mode==='AES-GCM' ? [['Auth Tag', tag, true]] : []),
+      ['Salt',       entry.salt,            true],
+    ];
+    const container = document.getElementById('enc-result');
+    document.getElementById('enc-result-rows').innerHTML = rows.map(([k,v,canCopy]) => `
+      <div class="result-row">
+        <span class="result-key">${k}</span>
+        <div style="display:flex;align-items:center;gap:4px;">
+          <span class="result-val" title="${v}">${v.length>28 ? v.slice(0,28)+'…' : v}</span>
+          ${canCopy ? `<button class="copy-btn" onclick="copyText('${v.replace(/'/g,"\\'")}')">COPY</button>` : ''}
+        </div>
+      </div>
+    `).join('');
+    container.className = 'result-box show ok';
+
+    // update card preview with masked
+    document.getElementById('card-num-display').textContent = '•••• •••• •••• '+last4;
+    renderVault(); renderDecVault();
+
+  } catch(e) {
+    log('enc-log', 'Encryption failed: '+e.message, 'err');
+  }
+
+  btn.disabled = false; btn.classList.remove('busy');
+}
+
+// ════════════════════════════════════════════════════════════════
+//  DECRYPT
+// ════════════════════════════════════════════════════════════════
+async function decryptCard() {
+  const ctB64  = document.getElementById('dec-token').value.trim();
+  const pass   = document.getElementById('dec-key').value;
+  const mode   = document.getElementById('dec-mode').value;
+  const ivB64  = document.getElementById('dec-iv').value.trim();
+  const tagB64 = document.getElementById('dec-tag').value.trim();
+
+  // check if it's a token UUID → find in vault
+  const vaultEntry = VAULT.find(e => e.token === ctB64);
+  const entry = vaultEntry || null;
+
+  const cipherB64 = entry ? entry.ciphertext : ctB64;
+  const ivFinal   = entry ? entry.iv   : ivB64;
+  const tagFinal  = entry ? entry.tag  : tagB64;
+  const saltFinal = entry ? entry.salt : null;
+  const modeFinal = entry ? entry.mode : mode;
+
+  if (!cipherB64) { log('dec-log','Paste ciphertext or token UUID.','err'); return; }
+  if (!pass)      { log('dec-log','Decryption key required.','err'); return; }
+  if (!ivFinal)   { log('dec-log','IV / Nonce required.','err'); return; }
+  if (modeFinal==='AES-GCM' && !tagFinal) { log('dec-log','Auth tag required for GCM mode.','err'); return; }
+  if (!saltFinal) { log('dec-log','Salt is required. Use token lookup or paste salt from encryption.','err'); return; }
+
+  const btn = document.getElementById('dec-btn');
+  btn.disabled = true; btn.classList.add('busy');
+  log('dec-log', `Decrypting (${modeFinal})…`);
+
+  try {
+    const salt = fromB64(saltFinal);
+    const iv   = fromB64(ivFinal);
+    const ct   = fromB64(cipherB64);
+    const key  = await deriveKey(pass, salt, modeFinal);
+
+    let plainBytes;
+    if (modeFinal === 'AES-GCM') {
+      const tag = fromB64(tagFinal);
+      const full = new Uint8Array(ct.length + tag.length);
+      full.set(ct); full.set(tag, ct.length);
+      plainBytes = new Uint8Array(await crypto.subtle.decrypt({ name:'AES-GCM', iv, tagLength:128 }, key, full));
+    } else {
+      const raw = new Uint8Array(await crypto.subtle.decrypt({ name:'AES-CBC', iv }, key, ct));
+      plainBytes = pkcs7Unpad(raw);
+    }
+
+    const decoded = JSON.parse(new TextDecoder().decode(plainBytes));
+    log('dec-log', `Decryption SUCCESS. PAN recovered.`, 'ok');
+    log('dec-log', `Masked: ****${decoded.pan.slice(-4)}`, 'ok');
+
+    const rows = [
+      ['PAN',  decoded.pan],
+      ['Name', decoded.name || '—'],
+      ['Exp',  decoded.exp  || '—'],
+    ];
+    document.getElementById('dec-result-rows').innerHTML = rows.map(([k,v]) => `
+      <div class="result-row">
+        <span class="result-key">${k}</span>
+        <div style="display:flex;align-items:center;gap:4px;">
+          <span class="result-val">${v}</span>
+          <button class="copy-btn" onclick="copyText('${v}')">COPY</button>
+        </div>
+      </div>
+    `).join('');
+    document.getElementById('dec-result').className = 'result-box show ok';
+
+  } catch(e) {
+    log('dec-log','Decryption failed — wrong key, corrupted data, or wrong mode.','err');
+    document.getElementById('dec-result').className = 'result-box show err';
+    document.getElementById('dec-result-rows').innerHTML = `
+      <div class="result-row"><span class="result-key" style="color:var(--red)">Error</span>
+      <span class="result-val">Invalid key or corrupted ciphertext</span></div>`;
+  }
+
+  btn.disabled = false; btn.classList.remove('busy');
+}
+
+// ════════════════════════════════════════════════════════════════
+//  VAULT RENDERING
+// ════════════════════════════════════════════════════════════════
+function renderVault() {
+  const el = document.getElementById('token-list');
+  document.getElementById('vault-count').textContent = VAULT.length + ' token' + (VAULT.length!==1?'s':'') + ' stored';
+  if (!VAULT.length) {
+    el.innerHTML = '<div style="font-size:13px;color:var(--text3);text-align:center;padding:32px;">No tokens stored. Encrypt a card to create tokens.</div>';
+    return;
+  }
+  el.innerHTML = VAULT.slice().reverse().map((e,ri) => {
+    const i = VAULT.length - 1 - ri;
+    return `
+    <div class="token-item">
+      <div class="token-top">
+        <span class="token-id">${e.token.slice(0,13)}…</span>
+        <span class="token-ts">${e.createdAt}</span>
+      </div>
+      <div class="token-pan">${e.maskedPAN.replace(/(.{4})/g,'$1 ').trim()}</div>
+      <div style="font-size:11px;color:var(--text2);">${e.name || '—'} · ${e.brand} · Exp: ${e.exp||'—'} · ${e.mode}</div>
+      <div class="token-actions">
+        <button class="ta-btn ta-dec" onclick="autoFillDecrypt(${i})">Decrypt</button>
+        <button class="ta-btn ta-copy" onclick="copyText('${e.token}')">Copy Token</button>
+        <button class="ta-btn ta-copy" onclick="copyText('${e.ciphertext}')">Copy CT</button>
+        <button class="ta-btn ta-del" onclick="deleteToken(${i})">Delete</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderDecVault() {
+  const el = document.getElementById('dec-vault-list');
+  if (!VAULT.length) {
+    el.innerHTML = '<div style="font-size:12px;color:var(--text3);text-align:center;padding:16px;">No tokens in vault yet.</div>';
+    return;
+  }
+  el.innerHTML = VAULT.slice().reverse().map((e,ri) => {
+    const i = VAULT.length-1-ri;
+    return `
+    <div class="token-item" style="cursor:pointer;" onclick="autoFillDecrypt(${i});switchTab('decrypt')">
+      <div style="font-family:var(--mono);font-size:13px;color:var(--acc);letter-spacing:.1em;margin-bottom:4px;">${e.maskedPAN}</div>
+      <div style="font-size:11px;color:var(--text2);">${e.name||'—'} · ${e.brand} · ${e.mode}</div>
+      <div style="font-family:var(--mono);font-size:10px;color:var(--text3);margin-top:4px;">${e.token.slice(0,26)}…</div>
+    </div>`;
+  }).join('');
+}
+
+function autoFillDecrypt(i) {
+  const e = VAULT[i];
+  document.getElementById('dec-token').value  = e.ciphertext;
+  document.getElementById('dec-mode').value   = e.mode;
+  document.getElementById('dec-iv').value     = e.iv;
+  document.getElementById('dec-tag').value    = e.tag || '';
+  // store salt on a hidden field trick — use data attribute
+  document.getElementById('dec-token').dataset.salt = e.salt;
+  // patch: inject salt into decryptCard scope
+  window._pendingSalt = e.salt;
+  toast('Fields auto-filled. Enter your key and decrypt.');
+}
+
+function deleteToken(i) {
+  VAULT.splice(i, 1);
+  renderVault(); renderDecVault();
+  log('enc-log', 'Token deleted from vault.', 'warn');
+}
+
+function clearVault() {
+  VAULT.length = 0;
+  renderVault(); renderDecVault();
+}
+
+// patch deriveKey to accept salt from vault on decrypt
+const _origDecrypt = decryptCard;
+window.decryptCard = async function() {
+  // If salt not in field, check pending
+  if (window._pendingSalt) {
+    document.getElementById('dec-token').dataset.salt = window._pendingSalt;
+  }
+  await _origDecrypt();
+};
+
+// override salt lookup in decryptCard
+(function() {
+  const orig = window.decryptCard;
+  window.decryptCard = async function() {
+    const saltField = document.getElementById('dec-token').dataset.salt || window._pendingSalt || null;
+    // temporarily monkey-patch fromB64 fallback
+    window._overrideSalt = saltField;
+    await _origDecrypt_real();
+    window._overrideSalt = null;
+    window._pendingSalt = null;
+  };
+})();
+
+// Clean version of decrypt with salt override support
+async function _origDecrypt_real() {
+  const ctB64  = document.getElementById('dec-token').value.trim();
+  const pass   = document.getElementById('dec-key').value;
+  const mode   = document.getElementById('dec-mode').value;
+  const ivB64  = document.getElementById('dec-iv').value.trim();
+  const tagB64 = document.getElementById('dec-tag').value.trim();
+
+  const vaultEntry = VAULT.find(e => e.token === ctB64 || e.ciphertext === ctB64);
+  const entry = vaultEntry || null;
+
+  const cipherB64 = entry ? entry.ciphertext : ctB64;
+  const ivFinal   = entry ? entry.iv   : ivB64;
+  const tagFinal  = entry ? entry.tag  : tagB64;
+  const saltFinal = entry ? entry.salt : (window._overrideSalt || null);
+  const modeFinal = entry ? entry.mode : mode;
+
+  if (!cipherB64) { log('dec-log','Paste ciphertext or token UUID.','err'); return; }
+  if (!pass)      { log('dec-log','Decryption key required.','err'); return; }
+  if (!ivFinal)   { log('dec-log','IV / Nonce required.','err'); return; }
+  if (modeFinal==='AES-GCM' && !tagFinal) { log('dec-log','Auth tag required for GCM mode.','err'); return; }
+  if (!saltFinal) { log('dec-log','Salt missing. Use the "Decrypt" button from the vault.','err'); return; }
+
+  const btn = document.getElementById('dec-btn');
+  btn.disabled = true; btn.classList.add('busy');
+  log('dec-log', `Decrypting (${modeFinal})…`);
+
+  try {
+    const salt = fromB64(saltFinal);
+    const iv   = fromB64(ivFinal);
+    const ct   = fromB64(cipherB64);
+    const key  = await deriveKey(pass, salt, modeFinal);
+
+    let plainBytes;
+    if (modeFinal === 'AES-GCM') {
+      const tag = fromB64(tagFinal);
+      const full = new Uint8Array(ct.length + tag.length);
+      full.set(ct); full.set(tag, ct.length);
+      plainBytes = new Uint8Array(await crypto.subtle.decrypt({ name:'AES-GCM', iv, tagLength:128 }, key, full));
+    } else {
+      const raw = new Uint8Array(await crypto.subtle.decrypt({ name:'AES-CBC', iv }, key, ct));
+      plainBytes = pkcs7Unpad(raw);
+    }
+
+    const decoded = JSON.parse(new TextDecoder().decode(plainBytes));
+    log('dec-log', `Decryption SUCCESS.`, 'ok');
+
+    const rows = [
+      ['PAN',  decoded.pan],
+      ['Name', decoded.name || '—'],
+      ['Exp',  decoded.exp  || '—'],
+    ];
+    document.getElementById('dec-result-rows').innerHTML = rows.map(([k,v]) => `
+      <div class="result-row">
+        <span class="result-key">${k}</span>
+        <div style="display:flex;align-items:center;gap:4px;">
+          <span class="result-val">${v}</span>
+          <button class="copy-btn" onclick="copyText('${v}')">COPY</button>
+        </div>
+      </div>
+    `).join('');
+    document.getElementById('dec-result').className = 'result-box show ok';
+
+  } catch(e) {
+    log('dec-log','Decryption failed — wrong key, mode, or corrupted data.','err');
+    document.getElementById('dec-result').className = 'result-box show err';
+    document.getElementById('dec-result-rows').innerHTML = `
+      <div class="result-row"><span class="result-key" style="color:var(--red)">Error</span>
+      <span class="result-val">Invalid key or corrupted ciphertext</span></div>`;
+  }
+  btn.disabled = false; btn.classList.remove('busy');
+}
+
+// Override tab's decrypt call to use clean version
+document.getElementById('dec-btn').onclick = async function() {
+  window._overrideSalt = document.getElementById('dec-token').dataset.salt || window._pendingSalt || null;
+  await _origDecrypt_real();
+  window._overrideSalt = null;
+  window._pendingSalt = null;
+};
+
+// ════════════════════════════════════════════════════════════════
+//  TABS
+// ════════════════════════════════════════════════════════════════
+function switchTab(t) {
+  ['encrypt','decrypt','vault'].forEach(p => {
+    document.getElementById('panel-'+p).style.display = p===t ? 'block' : 'none';
+  });
+  document.querySelectorAll('.tab').forEach((b,i) => {
+    b.classList.toggle('active', ['encrypt','decrypt','vault'][i]===t);
+  });
+  if (t==='vault') renderVault();
+  if (t==='decrypt') renderDecVault();
+}
+
+// GCM tag field toggle
+document.getElementById('dec-mode').addEventListener('change', function() {
+  document.getElementById('dec-tag-field').style.display = this.value==='AES-GCM' ? 'block' : 'none';
+});
+</script>
+</body>
+</html>
